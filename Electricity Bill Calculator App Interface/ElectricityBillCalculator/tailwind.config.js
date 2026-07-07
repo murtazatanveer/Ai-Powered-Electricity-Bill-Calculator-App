@@ -13,12 +13,6 @@ module.exports = {
         background: "#C8D2A6", // Tea Mist - App Background
         "surface-alt": "#DDE6C8", // Slightly darker Tea Mist
 
-        // Text Colors
-        "text-primary": "#1D2E1B", // Forest Brew
-        "text-secondary": "#5A6B4A", // Muted forest green
-        "text-light": "#FFFFFF", // White
-        "text-muted": "#8A9B7A", // Lighter muted tone
-
         // Semantic Colors
         error: "#FF3F33", // Error Color
         success: "#FFDE42", // Success Color (yellow/gold)
