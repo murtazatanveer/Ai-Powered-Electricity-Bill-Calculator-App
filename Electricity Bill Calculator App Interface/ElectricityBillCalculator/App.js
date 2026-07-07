@@ -1,6 +1,4 @@
 import "./global.css";
-// App.js
-import React from "react";
 import {
   View,
   Text,
