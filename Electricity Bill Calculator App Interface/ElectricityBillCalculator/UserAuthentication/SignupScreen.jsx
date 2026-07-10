@@ -1,5 +1,4 @@
-// src/UserAuthentication/LoginScreen.js
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -12,19 +11,23 @@ import {
   StyleSheet,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
 
 import COLORS from "../Components/Colors";
 import Logo from "./Logo";
 import { auth } from "../firebase-config";
-import CustomAlert from "./CustomAlert";
+import CustomAlert from "./CustomAlert"; // <-- Import Glass Pop-up
 
-export default function LoginScreen({ navigation }) {
+export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // --- POP-UP STATE ---
@@ -32,12 +35,12 @@ export default function LoginScreen({ navigation }) {
   const [alertConfig, setAlertConfig] = useState({
     title: "",
     message: "",
-    type: "info",
+    type: "info", // "info", "success", "error"
     buttonText: "OK",
     onAction: null,
   });
 
-  // Helper to trigger glass pop-up
+  // Helper function to trigger the glass pop-up
   const showGlassAlert = (
     title,
     message,
@@ -49,107 +52,64 @@ export default function LoginScreen({ navigation }) {
     setAlertVisible(true);
   };
 
-  // --- SILENT AUTO-LOGIN CHECK ON LOAD ---
-  useEffect(() => {
-    const checkSavedCredentials = async () => {
-      try {
-        const savedEmail = await AsyncStorage.getItem("userEmail");
-        const savedPass = await AsyncStorage.getItem("userPassword");
-
-        if (savedEmail && savedPass) {
-          try {
-            const res = await signInWithEmailAndPassword(
-              auth,
-              savedEmail,
-              savedPass,
-            );
-
-            if (res.user.emailVerified) {
-              navigation.replace("Dashboard");
-            } else {
-              await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
-              showGlassAlert(
-                "Email Not Verified",
-                "Please verify your email before logging in.",
-                "error",
-              );
-            }
-          } catch {
-            // Silent fail: clear stored credentials only
-            await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
-          }
-        }
-      } catch {
-        // Silent fail: just show the login form
-      }
-    };
-
-    checkSavedCredentials();
-  }, []);
-
-  // --- EMAIL LOGIN LOGIC ---
-  const handleEmailLogin = async () => {
-    if (!email || !password) {
-      showGlassAlert("Error", "Please enter both email and password.", "error");
+  // --- EMAIL SIGNUP LOGIC ---
+  const handleEmailSignup = async () => {
+    if (!email || !password || !confirmPassword) {
+      showGlassAlert("Error", "Please fill in all fields.", "error");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showGlassAlert("Error", "Passwords do not match.", "error");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await signInWithEmailAndPassword(auth, email, password);
+      const res = await createUserWithEmailAndPassword(auth, email, password);
 
-      if (!res.user.emailVerified) {
-        showGlassAlert(
-          "Email Not Verified",
-          "Please check your inbox/spam folder and click the verification link before logging in.",
-          "error",
-        );
-        await signOut(auth);
-        setLoading(false);
-        return;
-      }
-
-      if (rememberMe) {
-        await AsyncStorage.setItem("userEmail", email);
-        await AsyncStorage.setItem("userPassword", password);
-      } else {
-        await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
-      }
+      // ✅ Send Email Verification
+      await sendEmailVerification(res.user);
 
       showGlassAlert(
-        "Welcome Back!",
-        `You have successfully logged in as ${res.user.email}.`,
+        "Verification Sent",
+        "Verification email sent! Please check your inbox/spam folder to verify your email before logging in.",
         "success",
-        "Go to Dashboard",
-        () => navigation.replace("Dashboard"),
+        "Go to Login",
+        () => navigation.navigate("Login"),
       );
-    } catch (err) {
-      let errorMsg = "Login failed. Please try again.";
 
+      // Force sign out so they must verify before logging in
+      await signOut(auth);
+    } catch (err) {
+      let errorMsg = "Signup failed. Please try again.";
+
+      // ✅ Detailed error handling switch
       switch (err.code) {
-        case "auth/invalid-credential":
-        case "auth/wrong-password":
-          errorMsg = "Invalid email or password";
+        case "auth/email-already-in-use":
+          errorMsg = "Email already exists. Try logging in.";
           break;
         case "auth/invalid-email":
           errorMsg = "Invalid email format";
           break;
-        case "auth/user-disabled":
-          errorMsg = "This account has been disabled";
+        case "auth/weak-password":
+          errorMsg = "Password should be at least 6 characters";
           break;
-        case "auth/user-not-found":
-          errorMsg = "No account found with this email";
-          break;
-        case "auth/too-many-requests":
-          errorMsg = "Too many failed attempts. Try again later";
+        case "auth/missing-password":
+          errorMsg = "Password is required";
           break;
         case "auth/network-request-failed":
-          errorMsg = "Network error. Check your connection";
+          errorMsg = "Network error. Check internet connection";
+          break;
+        case "auth/operation-not-allowed":
+          errorMsg = "Email/password authentication is disabled";
+          break;
+        case "auth/too-many-requests":
+          errorMsg = "Too many requests. Try again later";
           break;
         default:
-          errorMsg = `Login failed (${err.code})`;
+          errorMsg = `Signup failed (${err.code})`;
       }
-      showGlassAlert("Login Failed", errorMsg, "error");
+      showGlassAlert("Signup Failed", errorMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -170,8 +130,10 @@ export default function LoginScreen({ navigation }) {
           bounces={false}
         >
           <View style={styles.mainContent}>
-            <Logo name="Log In" />
+            {/* Logo Area */}
+            <Logo name="Create Account" />
 
+            {/* Email Input Field */}
             <View style={styles.inputWrapper}>
               <MaterialCommunityIcons
                 name="email-outline"
@@ -194,6 +156,7 @@ export default function LoginScreen({ navigation }) {
               </View>
             </View>
 
+            {/* Password Input Field */}
             <View style={styles.inputWrapper}>
               <MaterialCommunityIcons
                 name="lock-outline"
@@ -223,46 +186,64 @@ export default function LoginScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.rememberRow}>
+            {/* Confirm Password Input Field */}
+            <View style={styles.inputWrapper}>
+              <MaterialCommunityIcons
+                name="lock-check-outline"
+                size={24}
+                color={COLORS.primary}
+                style={styles.inputIcon}
+              />
+              <View style={styles.inputTextContainer}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor="#8A9B7A"
+                  editable={!loading}
+                />
+              </View>
               <TouchableOpacity
-                style={styles.rememberTouchable}
-                onPress={() => setRememberMe(!rememberMe)}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <View
-                  style={[styles.checkbox, rememberMe && styles.checkboxActive]}
-                >
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.rememberText}>Remember Me</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity>
-                <Text style={styles.forgotText}>Forgotten Password?</Text>
+                <MaterialCommunityIcons
+                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                  size={24}
+                  color={COLORS.primary}
+                  style={styles.eyeIcon}
+                />
               </TouchableOpacity>
             </View>
 
+            {/* Sign Up Button */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && { opacity: 0.7 }]}
-              onPress={handleEmailLogin}
+              style={[styles.signUpButton, loading && { opacity: 0.7 }]}
+              onPress={handleEmailSignup}
               disabled={loading}
             >
-              <Text style={styles.loginButtonText}>
-                {loading ? "Logging in..." : "Log In"}
+              <Text style={styles.signUpButtonText}>
+                {loading ? "Creating Account..." : "Sign Up"}
               </Text>
             </TouchableOpacity>
 
+            {/* ✅ SIMPLE FOOTER (Divider Removed) */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-                <Text style={styles.createAccountText}>Create Account</Text>
+              <Text style={styles.footerText}>Do you have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.loginLinkText}>Log In</Text>
               </TouchableOpacity>
             </View>
           </View>
 
+          {/* Spacer to prevent footer wall */}
           <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* 🪟 GLASSMORPHISM POP-UP COMPONENT */}
       <CustomAlert
         visible={alertVisible}
         title={alertConfig.title}
@@ -271,6 +252,7 @@ export default function LoginScreen({ navigation }) {
         buttonText={alertConfig.buttonText}
         onPress={() => {
           setAlertVisible(false);
+          // Run the custom action if provided (e.g., navigate to Login)
           if (alertConfig.onAction) {
             alertConfig.onAction();
           }
@@ -296,6 +278,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 40,
   },
+
+  // Input Styles
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -334,46 +318,9 @@ const styles = StyleSheet.create({
   eyeIcon: {
     opacity: 0.6,
   },
-  rememberRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    marginTop: 4,
-  },
-  rememberTouchable: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    marginRight: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxActive: {
-    backgroundColor: COLORS.primarySupport,
-    borderColor: COLORS.primarySupport,
-  },
-  checkmark: {
-    color: "#FFFFFF",
-    fontSize: 12,
-  },
-  rememberText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  forgotText: {
-    color: COLORS.primarySupport,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  loginButton: {
+
+  // Sign Up Button
+  signUpButton: {
     backgroundColor: COLORS.primarySupport,
     paddingVertical: 16,
     borderRadius: 16,
@@ -384,13 +331,15 @@ const styles = StyleSheet.create({
     elevation: 4,
     marginBottom: 24,
   },
-  loginButtonText: {
+  signUpButtonText: {
     color: "#FFFFFF",
     textAlign: "center",
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
+
+  // Footer
   footer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -400,7 +349,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.7,
   },
-  createAccountText: {
+  loginLinkText: {
     color: COLORS.primarySupport,
     fontSize: 14,
     fontWeight: "700",

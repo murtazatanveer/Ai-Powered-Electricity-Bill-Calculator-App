@@ -1,36 +1,26 @@
-// src/screens/SplashScreen.js
-import { useEffect, useRef } from "react";
-import { View, Image, SafeAreaView, StatusBar } from "react-native";
+import { View, Image, SafeAreaView, StatusBar, StyleSheet } from "react-native";
 import { useWindowDimensions } from "react-native";
 import * as Animatable from "react-native-animatable";
 
-import logo from "./assets/Logo.png";
+import logo from "../assets/GreenLogo.png";
+import COLORS from "./Colors";
 
-export default function SplashScreen({ onAnimationComplete }) {
+export default function SplashScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 380;
 
-  const textRef = useRef(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (onAnimationComplete) {
-        onAnimationComplete();
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <SafeAreaView className="flex-1 bg-primary-support">
-      <StatusBar barStyle="light-content" backgroundColor="#468432" />
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.primarySupport}
+      />
 
-      {/* Main Container - Centers content horizontally and vertically */}
-      <View className="flex-1 justify-center items-center px-6">
-        {/* Logo + Text Group - Centered horizontally */}
-        <View className="flex-row items-center justify-center gap-5 md:gap-8">
-          {/* Logo - Larger size */}
+      {/* Main Container */}
+      <View style={styles.mainContainer}>
+        {/* Logo + Text Group */}
+        <View style={styles.rowContainer}>
+          {/* Logo */}
           <Image
             source={logo}
             resizeMode="contain"
@@ -40,14 +30,16 @@ export default function SplashScreen({ onAnimationComplete }) {
             }}
           />
 
-          {/* Text Container - Animated, White color, Larger size */}
+          {/* Text - Auto animates because of the 'animation' prop */}
           <Animatable.Text
-            ref={textRef}
-            animation="fadeInDown"
-            duration={1000}
+            animation="fadeIn"
+            duration={2000}
             easing="ease-out"
             iterationCount={1}
-            className="text-white font-bold text-3xl md:text-5xl tracking-tight leading-tight max-w-[240px]"
+            style={[
+              styles.animatedText,
+              isSmallScreen ? styles.textSmall : styles.textLarge,
+            ]}
           >
             Electricity{"\n"}Bill Calculator
           </Animatable.Text>
@@ -56,3 +48,38 @@ export default function SplashScreen({ onAnimationComplete }) {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.primarySupport,
+  },
+  mainContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  rowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 20,
+  },
+  animatedText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    textAlign: "left",
+  },
+  textSmall: {
+    fontSize: 28,
+    maxWidth: 200,
+    lineHeight: 34,
+  },
+  textLarge: {
+    fontSize: 40,
+    maxWidth: 240,
+    lineHeight: 48,
+  },
+});
