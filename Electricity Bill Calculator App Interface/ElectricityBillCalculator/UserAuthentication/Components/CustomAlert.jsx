@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import COLORS from "../Components/Colors";
+import COLORS from "../../Components/Colors";
 
 const { width } = Dimensions.get("window");
 
@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
   },
   card: {
     width: width * 0.8,
-    // 🟢 New background: A bright, soft Tea Mist shade
     backgroundColor: "rgba(218, 228, 200, 0.95)",
     borderRadius: 20,
     padding: 24,

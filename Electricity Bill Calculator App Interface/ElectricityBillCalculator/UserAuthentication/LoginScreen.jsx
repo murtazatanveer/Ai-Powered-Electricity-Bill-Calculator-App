@@ -18,7 +18,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import COLORS from "../Components/Colors";
 import Logo from "./Logo";
 import { auth } from "../firebase-config";
-import CustomAlert from "./CustomAlert";
+import CustomAlert from "./Components/CustomAlert";
+import LoginSkeleton from "./Components/LoginSkeleton";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -27,7 +28,8 @@ export default function LoginScreen({ navigation }) {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // --- POP-UP STATE ---
+  const [isCheckingStorage, setIsCheckingStorage] = useState(true);
+
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
     title: "",
@@ -37,7 +39,6 @@ export default function LoginScreen({ navigation }) {
     onAction: null,
   });
 
-  // Helper to trigger glass pop-up
   const showGlassAlert = (
     title,
     message,
@@ -49,7 +50,6 @@ export default function LoginScreen({ navigation }) {
     setAlertVisible(true);
   };
 
-  // --- SILENT AUTO-LOGIN CHECK ON LOAD ---
   useEffect(() => {
     const checkSavedCredentials = async () => {
       try {
@@ -65,7 +65,9 @@ export default function LoginScreen({ navigation }) {
             );
 
             if (res.user.emailVerified) {
-              navigation.replace("Dashboard");
+              // ✅ UPDATE: Navigate to the Drawer Wrapper
+              navigation.replace("AppDrawer");
+              return;
             } else {
               await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
               showGlassAlert(
@@ -75,19 +77,17 @@ export default function LoginScreen({ navigation }) {
               );
             }
           } catch {
-            // Silent fail: clear stored credentials only
             await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
           }
         }
-      } catch {
-        // Silent fail: just show the login form
-      }
+      } catch {}
+
+      setIsCheckingStorage(false);
     };
 
     checkSavedCredentials();
   }, []);
 
-  // --- EMAIL LOGIN LOGIC ---
   const handleEmailLogin = async () => {
     if (!email || !password) {
       showGlassAlert("Error", "Please enter both email and password.", "error");
@@ -116,13 +116,8 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
       }
 
-      showGlassAlert(
-        "Welcome Back!",
-        `You have successfully logged in as ${res.user.email}.`,
-        "success",
-        "Go to Dashboard",
-        () => navigation.replace("Dashboard"),
-      );
+      // ✅ UPDATE: Navigate to the Drawer Wrapper
+      navigation.replace("AppDrawer");
     } catch (err) {
       let errorMsg = "Login failed. Please try again.";
 
@@ -154,6 +149,11 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
     }
   };
+
+  // ✅ Show the Skeleton Loading while checking storage
+  if (isCheckingStorage) {
+    return <LoginSkeleton />;
+  }
 
   return (
     <View style={styles.container}>

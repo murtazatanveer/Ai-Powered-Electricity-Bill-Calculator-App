@@ -1,3 +1,4 @@
+// src/screens/SignupScreen.js
 import { useState } from "react";
 import {
   View,
@@ -20,9 +21,10 @@ import {
 import COLORS from "../Components/Colors";
 import Logo from "./Logo";
 import { auth } from "../firebase-config";
-import CustomAlert from "./CustomAlert"; // <-- Import Glass Pop-up
+import CustomAlert from "./Components/CustomAlert";
 
 export default function SignupScreen({ navigation }) {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,12 +37,11 @@ export default function SignupScreen({ navigation }) {
   const [alertConfig, setAlertConfig] = useState({
     title: "",
     message: "",
-    type: "info", // "info", "success", "error"
+    type: "info",
     buttonText: "OK",
     onAction: null,
   });
 
-  // Helper function to trigger the glass pop-up
   const showGlassAlert = (
     title,
     message,
@@ -54,7 +55,7 @@ export default function SignupScreen({ navigation }) {
 
   // --- EMAIL SIGNUP LOGIC ---
   const handleEmailSignup = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!fullName || !email || !password || !confirmPassword) {
       showGlassAlert("Error", "Please fill in all fields.", "error");
       return;
     }
@@ -83,7 +84,6 @@ export default function SignupScreen({ navigation }) {
     } catch (err) {
       let errorMsg = "Signup failed. Please try again.";
 
-      // ✅ Detailed error handling switch
       switch (err.code) {
         case "auth/email-already-in-use":
           errorMsg = "Email already exists. Try logging in.";
@@ -132,6 +132,27 @@ export default function SignupScreen({ navigation }) {
           <View style={styles.mainContent}>
             {/* Logo Area */}
             <Logo name="Create Account" />
+
+            {/* ✅ New: Full Name Input Field */}
+            <View style={styles.inputWrapper}>
+              <MaterialCommunityIcons
+                name="account-outline"
+                size={24}
+                color={COLORS.primary}
+                style={styles.inputIcon}
+              />
+              <View style={styles.inputTextContainer}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#8A9B7A"
+                  editable={!loading}
+                />
+              </View>
+            </View>
 
             {/* Email Input Field */}
             <View style={styles.inputWrapper}>
@@ -229,7 +250,7 @@ export default function SignupScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ SIMPLE FOOTER (Divider Removed) */}
+            {/* SIMPLE FOOTER */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Do you have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate("Login")}>
@@ -238,12 +259,10 @@ export default function SignupScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Spacer to prevent footer wall */}
           <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* 🪟 GLASSMORPHISM POP-UP COMPONENT */}
       <CustomAlert
         visible={alertVisible}
         title={alertConfig.title}
@@ -252,7 +271,6 @@ export default function SignupScreen({ navigation }) {
         buttonText={alertConfig.buttonText}
         onPress={() => {
           setAlertVisible(false);
-          // Run the custom action if provided (e.g., navigate to Login)
           if (alertConfig.onAction) {
             alertConfig.onAction();
           }
@@ -279,7 +297,6 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
 
-  // Input Styles
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -319,7 +336,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // Sign Up Button
   signUpButton: {
     backgroundColor: COLORS.primarySupport,
     paddingVertical: 16,
@@ -339,7 +355,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Footer
   footer: {
     flexDirection: "row",
     justifyContent: "center",
