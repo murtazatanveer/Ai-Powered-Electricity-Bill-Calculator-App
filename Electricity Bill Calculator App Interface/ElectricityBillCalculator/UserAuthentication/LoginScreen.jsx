@@ -65,8 +65,8 @@ export default function LoginScreen({ navigation }) {
             );
 
             if (res.user.emailVerified) {
-              // ✅ UPDATE: Navigate to the Drawer Wrapper
-              navigation.replace("AppDrawer");
+              // ✅ FIXED: Navigate to Dashboard
+              navigation.replace("Dashboard");
               return;
             } else {
               await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
@@ -116,8 +116,8 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.multiRemove(["userEmail", "userPassword"]);
       }
 
-      // ✅ UPDATE: Navigate to the Drawer Wrapper
-      navigation.replace("AppDrawer");
+      // ✅ FIXED: Navigate to Dashboard
+      navigation.replace("Dashboard");
     } catch (err) {
       let errorMsg = "Login failed. Please try again.";
 

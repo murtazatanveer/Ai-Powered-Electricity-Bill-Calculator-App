@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Electricity Bill Calculator",
-    "slug": "Electricity Bill Calculator",
+    "name": "E-Bill Calculator",
+    "slug": "E-Bill Calculator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/GreenLogo.png",

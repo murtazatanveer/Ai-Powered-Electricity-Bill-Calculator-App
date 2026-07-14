@@ -1,9 +1,8 @@
 // src/components/CustomDrawer.js
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   Dimensions,
   Animated,
   PanResponder,
@@ -12,19 +11,20 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import COLORS from "../Components/Colors";
-import logo from "../assets/LightLogo.png";
+import logo from "../assets/GreenLogo.png";
 
 const { width } = Dimensions.get("window");
-const DRAWER_WIDTH = Math.min(width * 0.8, 320);
+const DRAWER_WIDTH = Math.min(width * 0.85, 350);
 
 export default function CustomDrawer({
   isOpen,
   onClose,
-  navigation,
-  activeRoute = "OCR Meter Reading",
+  navigation, // <-- Already passed from App.js
+  activeRoute = "Meter Reading", // 👈 Updated default name
 }) {
   // Animation Values
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -63,12 +63,12 @@ export default function CustomDrawer({
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: 0,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 0.6,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
     ]).start();
@@ -78,12 +78,12 @@ export default function CustomDrawer({
     Animated.parallel([
       Animated.timing(translateX, {
         toValue: -DRAWER_WIDTH,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -91,16 +91,16 @@ export default function CustomDrawer({
     });
   };
 
-  // --- Menu Data ---
+  // --- MENU DATA ---
   const menuItems = [
-    { name: "Dashboard", icon: "view-dashboard-outline", disabled: true },
-    { name: "OCR Meter Reading", icon: "camera", disabled: false },
-    { name: "Reading History", icon: "history", disabled: true },
-    { name: "Tariff Rates", icon: "currency-inr", disabled: true },
+    { name: "Dashboard", icon: "view-dashboard-outline", screen: "Dashboard" },
+    { name: "Meter Reading", icon: "camera", screen: "CaptureMeter" }, // 👈 Renamed here
+    { name: "Reading History", icon: "history", screen: "Reading History" },
+    { name: "Tariff Rates", icon: "currency-inr", screen: "Tariff Rates" },
     {
       name: "Smart Recommendation",
       icon: "lightbulb-on-outline",
-      disabled: true,
+      screen: "Smart Recommendation",
     },
   ];
 
@@ -128,65 +128,57 @@ export default function CustomDrawer({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {/* Header */}
+            {/* ✅ HEADER */}
             <View style={styles.header}>
-              <Image source={logo} style={styles.logo} resizeMode="contain" />
-              <Text style={styles.appName}>
-                Electricity{"\n"}Bill Calculator
-              </Text>
+              <Image
+                source={logo}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.appName}>Electricity Bill Calculator</Text>
             </View>
 
-            {/* Profile Section */}
+            {/* ✅ PROFILE SECTION */}
             <View style={styles.profileSection}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>U</Text>
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>User Name</Text>
-                <Text style={styles.profileEmail}>user@email.com</Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  user@email.com
+                </Text>
               </View>
             </View>
 
-            {/* Menu Items */}
+            {/* ✅ MENU ITEMS */}
             <View style={styles.menuContainer}>
               {menuItems.map((item, index) => {
                 const isActive = activeRoute === item.name;
                 return (
                   <TouchableOpacity
                     key={index}
-                    style={[
-                      styles.menuItem,
-                      isActive && styles.activeMenuItem,
-                      item.disabled && styles.disabledMenuItem,
-                    ]}
+                    style={[styles.menuItem, isActive && styles.activeMenuItem]}
                     onPress={() => {
-                      if (!item.disabled && item.name === "OCR Meter Reading") {
-                        closeDrawer();
-                        setTimeout(
-                          () => navigation.navigate("CaptureMeter"),
-                          300,
-                        );
-                      }
+                      closeDrawer(); // Close the drawer first
+                      setTimeout(() => {
+                        // Then navigate to the correct screen
+                        if (navigation && item.screen) {
+                          navigation.navigate(item.screen);
+                        }
+                      }, 300);
                     }}
-                    disabled={item.disabled}
                   >
                     <MaterialCommunityIcons
                       name={item.icon}
                       size={24}
-                      color={
-                        isActive
-                          ? COLORS.background
-                          : item.disabled
-                            ? "rgba(29, 46, 27, 0.3)"
-                            : COLORS.primary
-                      }
+                      color={isActive ? COLORS.background : COLORS.primary}
                       style={styles.icon}
                     />
                     <Text
                       style={[
                         styles.menuText,
                         isActive && styles.activeMenuText,
-                        item.disabled && styles.disabledMenuText,
                       ]}
                     >
                       {item.name}
@@ -197,19 +189,19 @@ export default function CustomDrawer({
             </View>
           </ScrollView>
 
-          {/* Logout Button */}
+          {/* ✅ BOTTOM SECTION (Logout) */}
           <View style={styles.bottomContainer}>
+            <View style={styles.bottomDivider} />
             <TouchableOpacity
               style={styles.logoutButton}
               onPress={handleLogout}
             >
-              <MaterialCommunityIcons
-                name="logout"
-                size={22}
-                color={COLORS.error}
-              />
+              <MaterialCommunityIcons name="logout" size={22} color="#FFFFFF" />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
+
+            {/* ✅ Added a subtle helper text for polish */}
+            <Text style={styles.helperText}>v1.0.0 • Secure Session</Text>
           </View>
         </SafeAreaView>
       </Animated.View>
@@ -217,7 +209,7 @@ export default function CustomDrawer({
   );
 }
 
-// ⚠️ UPDATED STYLES: Converted to a function to accept `isOpen`
+// --- STYLES ---
 const styles = {
   container: (isOpen) => ({
     position: "absolute",
@@ -245,47 +237,53 @@ const styles = {
     left: 0,
     bottom: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: COLORS.background,
+    backgroundColor: "#FFFFFF",
     elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
   },
   content: {
     flex: 1,
   },
+
+  // HEADER
   header: {
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: 24,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(29, 46, 27, 0.1)",
-    marginBottom: 8,
+    backgroundColor: COLORS.primarySupport,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    marginBottom: 16,
   },
-  logo: {
-    width: 60,
-    height: 60,
-    marginBottom: 12,
+  logoImage: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
   },
   appName: {
-    fontSize: 20,
+    flex: 1,
+    fontSize: 18,
     fontWeight: "700",
-    color: COLORS.primary,
-    textAlign: "center",
+    color: "#FFFFFF",
+    textAlign: "left",
     lineHeight: 24,
+    letterSpacing: 0.5,
   },
+
+  // PROFILE SECTION
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    marginHorizontal: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    marginHorizontal: 16,
+    backgroundColor: "rgba(200, 210, 166, 0.3)",
     borderRadius: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "rgba(29, 46, 27, 0.08)",
   },
   avatar: {
     width: 48,
@@ -312,10 +310,13 @@ const styles = {
   },
   profileEmail: {
     fontSize: 14,
-    color: "rgba(29, 46, 27, 0.7)",
+    color: "rgba(29, 46, 27, 0.6)",
   },
+
+  // MENU ITEMS
   menuContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    marginBottom: 10,
   },
   menuItem: {
     flexDirection: "row",
@@ -323,7 +324,7 @@ const styles = {
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   activeMenuItem: {
     backgroundColor: COLORS.primary,
@@ -332,9 +333,6 @@ const styles = {
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 2,
-  },
-  disabledMenuItem: {
-    opacity: 0.8,
   },
   icon: {
     marginRight: 16,
@@ -349,24 +347,43 @@ const styles = {
     color: COLORS.background,
     fontWeight: "600",
   },
-  disabledMenuText: {
-    color: "rgba(29, 46, 27, 0.4)",
-  },
+
+  // BOTTOM CONTAINER (LOGOUT)
   bottomContainer: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(29, 46, 27, 0.1)",
     padding: 20,
     paddingBottom: 24,
-    backgroundColor: COLORS.background,
+    backgroundColor: "#FFFFFF",
+  },
+  bottomDivider: {
+    height: 1,
+    backgroundColor: "rgba(29, 46, 27, 0.08)",
+    marginBottom: 16,
   },
   logoutButton: {
     flexDirection: "row",
+    backgroundColor: COLORS.error,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 50,
+    justifyContent: "center",
     alignItems: "center",
+    shadowColor: COLORS.error,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.error,
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginLeft: 12,
+  },
+  helperText: {
+    fontSize: 12,
+    color: COLORS.primary,
+    opacity: 0.4,
+    textAlign: "center",
+    marginTop: 12,
   },
 };
