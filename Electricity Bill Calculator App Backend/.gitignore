@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# Environment Files
+
+ebcenv/
+
+# .env file
+
+.env
+
+# Firebase Configuration Files
+
+service-account.json

@@ -1,25 +1,39 @@
 {
   "expo": {
     "name": "E-Bill Calculator",
-    "slug": "E-Bill Calculator",
+    "slug": "e-bill-calculator",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/GreenLogo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#468432"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.ebill"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/GreenLogo.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#468432"
       },
+      "package": "com.yourname.ebill",
       "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/LightLogo.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cdfcbd7a-1b33-4a54-81cc-fa79cfe1cdb4"
+      }
+    },
+    "plugins": [
+      "expo-build-properties"
+    ]
   }
 }

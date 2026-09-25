@@ -13,17 +13,15 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import COLORS from "../Components/Colors";
 
-// --- MOCK DATA ---
 const CHART_DATA = [
   { month: "Jan", usage: 320 },
   { month: "Feb", usage: 280 },
   { month: "Mar", usage: 310 },
   { month: "Apr", usage: 360 },
   { month: "May", usage: 410 },
-  { month: "Jun", usage: 485 }, // The current AI prediction
+  { month: "Jun", usage: 485 },
 ];
 
-// Mock Recommendations (Untouched)
 const RECOMMENDATIONS = [
   {
     id: "1",
@@ -56,15 +54,14 @@ export default function SmartRecommendationScreen({ navigation }) {
   const [hasHistory, setHasHistory] = useState(true);
   const [error, setError] = useState(false);
 
-  // Chart Interactive State
   const [selectedBar, setSelectedBar] = useState(null);
 
-  // Animated values for the chart bars
+ 
   const barAnimations = useRef(
     CHART_DATA.map(() => new Animated.Value(0)),
   ).current;
 
-  // Simulate Data Fetch
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
