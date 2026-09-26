@@ -1,6 +1,6 @@
 # firestore_client.py
 from google.cloud import firestore
-from config import settings
+from Configuration.config import settings
 
 _db: firestore.AsyncClient | None = None
 

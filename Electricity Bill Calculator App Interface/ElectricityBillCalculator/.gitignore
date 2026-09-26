@@ -41,5 +41,4 @@ yarn-error.*
 /android
 
 # Firebase Client Configuration Files
-
 firebase-config.js
