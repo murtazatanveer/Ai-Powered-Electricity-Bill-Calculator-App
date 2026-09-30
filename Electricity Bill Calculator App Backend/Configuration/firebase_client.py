@@ -1,4 +1,4 @@
-# Configuration/firebase_client.py
+
 from typing import Optional
 
 import firebase_admin

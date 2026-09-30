@@ -5,10 +5,8 @@ import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 CONFIG_DIR = Path(__file__).resolve().parent
 ENV_FILE = CONFIG_DIR / ".env"
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -31,6 +29,17 @@ class Settings(BaseSettings):
     # Firebase Admin (Auth) — both optional; fall back to GCP values
     firebase_project_id: str | None = None
     firebase_credentials_path: str | None = None
+
+    # ------------------------------------------------------------------
+    # Gemini (google-genai SDK)
+    # ------------------------------------------------------------------
+    gemini_api_key: str                              # required — from .env
+    gemini_model: str = "gemini-3.5-flash-lite"      # read from .env, fallback here
+
+    # ------------------------------------------------------------------
+    # Tariff scraping
+    # ------------------------------------------------------------------
+    tariff_data_extraction_url: str                  # required — from .env
 
 
 @lru_cache

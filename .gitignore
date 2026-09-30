@@ -1,3 +1,6 @@
 # Testing Folders
 APITest/
 FirebaseIntro/
+
+# Py Files
+__pycache__/

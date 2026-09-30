@@ -1,4 +1,4 @@
-# firestore_client.py
+
 from google.cloud import firestore
 from Configuration.config import settings
 
@@ -20,5 +20,5 @@ async def close_db() -> None:
     """Close the Firestore client on app shutdown."""
     global _db
     if _db is not None:
-        _db.close()          # ← NOT awaited
+        _db.close()        
         _db = None

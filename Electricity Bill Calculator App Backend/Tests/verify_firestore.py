@@ -1,5 +1,5 @@
 # verify_firestore.py  (TEMPORARY — delete after it passes)
-from config import settings
+from Configuration.config import settings
 
 from google.cloud import firestore
 

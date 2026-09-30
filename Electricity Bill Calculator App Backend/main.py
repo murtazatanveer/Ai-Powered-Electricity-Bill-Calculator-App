@@ -1,13 +1,14 @@
-# main.py
 from contextlib import asynccontextmanager
-from fastapi import FastAPI,Header,Depends,HTTPException
+from fastapi import FastAPI,Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel,Field
-from typing import Annotated
+
 
 from Configuration.config import settings
 from Configuration.firestore_client import get_db, close_db
-from Configuration.firebase_client import get_firebase_app,get_auth
+from Configuration.firebase_client import get_firebase_app
+from Dependencies.verifyAuthToken import verifyToken
+from Routes import billDataRoutes
+from Models.credentialsModels import Credentials
 
 
 
@@ -42,49 +43,11 @@ def welcome_message():
         "success": True,
     }
 
-def verifyToken(authToken: Annotated[str,Header(...,description="Provide Firebase Auth Id Token")]) -> dict:
-    auth=get_auth()
-    
-    try:
-        if not authToken.startswith("Bearer_"):         
-            raise HTTPException(status_code=401,detail="Invalid authorization header format")
-        
-        token = authToken.split("Bearer_", 1)[1].strip()
+app.include_router(billDataRoutes.router)
 
-        if not token:
-            raise HTTPException(status_code=401,detail="Missing token")
 
-        decoded = auth.verify_id_token(token,check_revoked=True)
-        return decoded
-    
-    except HTTPException:
-        raise  
-
-    except auth.ExpiredIdTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Token has expired",
-        )
-    except auth.RevokedIdTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Token has been revoked",
-        )
-    except auth.InvalidIdTokenError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid token",
-        )
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-class Credentials(BaseModel):
-    fullName: Annotated[str, Field(..., min_length=2, max_length=100, description="Full Name of the User")]
-    
-
-@app.post("/credentials")
-async def getCredentials(credentials:Credentials,decoded:dict=Depends(verifyToken)):
+@app.post("/add-credentials")
+async def setCredentials(credentials:Credentials,decoded:dict=Depends(verifyToken)):
     
     db = get_db()
 
@@ -104,5 +67,3 @@ async def getCredentials(credentials:Credentials,decoded:dict=Depends(verifyToke
     "email":email
     })
     return JSONResponse(status_code=201,content={"message":"User Created Sucessfully","success":True,"data":{"fullName": credentials.fullName,"email": email,"uid": uid,"docPath": doc_ref.path,}})
-   
-    
