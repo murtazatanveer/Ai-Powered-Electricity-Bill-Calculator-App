@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # Tariff scraping
     # ------------------------------------------------------------------
     tariff_data_extraction_url: str                  # required — from .env
+    tariff_data_document_id: str                     # required — from .env
 
 
 @lru_cache

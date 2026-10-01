@@ -1,40 +1,50 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI,Depends
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+import joblib
 
+import pandas as pd
 
 from Configuration.config import settings
 from Configuration.firestore_client import get_db, close_db
 from Configuration.firebase_client import get_firebase_app
-from Dependencies.verifyAuthToken import verifyToken
+from TariffDataExtraction.tariffDataScheduler import scheduler,registerJobs
+from Models.mlInputModel import ModelInput
+
 from Routes import billDataRoutes
-from Models.credentialsModels import Credentials
-
-
+from Routes import credentialsRoutes
+from Routes import billCalculationRoutes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Firestore (async)
+    # ── Firestore (async) ──
     get_db()
     print(f"✅ Firestore client ready → {settings.gcp_project_id}")
 
-    # Firebase Admin (sync, initialized once)
+    # ── Firebase Admin (sync) ──
     get_firebase_app()
     firebase_project = settings.firebase_project_id or settings.gcp_project_id
     print(f"✅ Firebase Admin ready → {firebase_project}")
 
+    # ── Scheduler ──
+    registerJobs()
+    scheduler.start()
+    print("✅ Scheduler started wating for the time")
+
     yield
+
+    # ── Shutdown ──
+    scheduler.shutdown(wait=False)
+    print("🛑 Scheduler stopped")
 
     await close_db()
     print("🔌 Firestore client closed")
-
 
 app = FastAPI(
     title="Electricity Bill Calculator API",
     version="1.0.0",
     lifespan=lifespan,
 )
-
 
 @app.get("/")
 def welcome_message():
@@ -45,25 +55,29 @@ def welcome_message():
 
 app.include_router(billDataRoutes.router)
 
+app.include_router(credentialsRoutes.router)
 
-@app.post("/add-credentials")
-async def setCredentials(credentials:Credentials,decoded:dict=Depends(verifyToken)):
-    
-    db = get_db()
+app.include_router(billCalculationRoutes.router)
 
-    uid = decoded["uid"]
-    email = decoded.get("email")
+        
+@app.post("/predict-bill")
+def predictBill(modelInput: ModelInput):
+    try:
+        
+        data = modelInput.model_dump()
+        df = pd.DataFrame([data])
 
-    doc_ref = db.collection("Users").document(uid)
-    
-    snap = await doc_ref.get()
+        model = joblib.load("ML_Model/electricity_bill_model.pkl")
+        pred = model.predict(df)
 
-    if snap.exists:
-        return JSONResponse(status_code=409,content={"message": "User Already Exists", "success": False})
-    
+        return {
+            "message": "Model Predicted Successfully",
+            "success": True,
+            "prediction": float(pred[0]),
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"message": f"Internal Server Error: {e}", "success": False},
+        )
 
-    await doc_ref.set({
-    "fullName":credentials.fullName,
-    "email":email
-    })
-    return JSONResponse(status_code=201,content={"message":"User Created Sucessfully","success":True,"data":{"fullName": credentials.fullName,"email": email,"uid": uid,"docPath": doc_ref.path,}})

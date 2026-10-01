@@ -1,10 +1,9 @@
-
-
+# Services/billDataServices.py
 from datetime import date, datetime
 from typing import Any
 
-from Configuration.firestore_client import get_db  
 from Models.billDataModels import BillData
+from Utils.firestoreHelpers import docExists, setDoc
 
 
 # ─────────────────────────────────────────────────────────────
@@ -160,12 +159,8 @@ async def saveBillData(uid: str, userBillData: BillData) -> tuple[bool, str]:
     - If a document already exists → (False, "Bill Data Already Exists").
     - On success → (True, "").
     """
-    db = get_db()
-    docRef = db.collection("BillData").document(uid)
-
-    snapshot = await docRef.get()
-    if snapshot.exists:
+    if await docExists("BillData", uid):
         return False, "Bill Data Already Exists"
 
-    await docRef.set(userBillData.model_dump())
+    await setDoc("BillData", uid, userBillData.model_dump())
     return True, ""

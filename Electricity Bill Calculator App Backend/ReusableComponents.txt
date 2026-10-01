@@ -1,0 +1,139 @@
+═══════════════════════════════════════════════════════════════
+REUSABILITY MAP — ELECTRICITY BILL CALCULATOR BACKEND
+═══════════════════════════════════════════════════════════════
+
+REUSABLE COMPONENTS (USE ACROSS MULTIPLE ENDPOINTS)
+───────────────────────────────────────────────────
+
+▸ Configuration/
+  ├── config.py                 → settings (env vars, all endpoints)
+  ├── firebaseClient.py         → auth, verifyToken (all protected endpoints)
+  ├── firestoreClient.py        → getDb() / db (all Firestore endpoints)
+  └── geminiClient.py           → client, extractFromImage(), extractFromHtml()
+                                  (all LLM / vision / scraper endpoints)
+
+
+▸ Utils/
+  ├── responseHelper.py         → errorResponse(), successResponse()
+                                  (all endpoints — uniform JSON shape)
+  ├── jsonExtractor.py          → extractJson()
+                                  (all endpoints that parse LLM output)
+  ├── htmlCleaner.py            → cleanHtml()
+                                  (all endpoints that scrape web pages)
+  └── uploadConstants.py        → ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE
+                                  (all endpoints that accept image uploads)
+
+
+▸ Models/
+  └── commonModels.py           → Readings, CurrentBillDetails
+                                  (shared across billing, prediction, history)
+
+
+▸ Prompts/  (folder is reusable, files are specific)
+  └── <feature>Prompt.py        → one prompt file per feature
+
+
+═══════════════════════════════════════════════════════════════
+ENDPOINT-SPECIFIC COMPONENTS (DO NOT REUSE)
+═══════════════════════════════════════════════════════════════
+
+▸ Routes/
+  └── billDataRoute.py          → routing only
+
+▸ Controllers/
+  └── billDataController.py     → orchestration + HTTP responses
+
+▸ Services/
+  └── billDataServices.py       → validateBillMonth(),
+                                  validateStatusRules(),
+                                  saveBillData()
+
+▸ Models/
+  └── billDataModel.py          → BillData, GeminiBillResponse
+
+▸ Prompts/
+  └── billExtractionPrompt.py   → BILL_EXTRACTION_PROMPT
+
+
+═══════════════════════════════════════════════════════════════
+DECISION RULES (WHERE DOES NEW CODE BELONG?)
+═══════════════════════════════════════════════════════════════
+
+1. Used by >1 endpoint (now or soon)?         → Utils/ or Configuration/
+2. About HTTP response shape?                 → Utils/responseHelper.py
+3. About parsing LLM output?                  → Utils/jsonExtractor.py
+4. About talking to external service?         → Configuration/
+5. Shared data shape across features?         → Models/commonModels.py
+6. Business logic for ONE feature?            → Services/<feature>Services.py
+7. Orchestration for ONE endpoint?            → Controllers/<feature>Controller.py
+8. HTTP routing for ONE endpoint?             → Routes/<feature>Route.py
+9. Prompt text for ONE feature?               → Prompts/<feature>Prompt.py
+
+
+═══════════════════════════════════════════════════════════════
+WHEN BUILDING A NEW ENDPOINT
+═══════════════════════════════════════════════════════════════
+
+CREATE (new files):
+  - Routes/<feature>Route.py
+  - Controllers/<feature>Controller.py
+  - Services/<feature>Services.py
+  - Models/<feature>Model.py       (if new data shape)
+  - Prompts/<feature>Prompt.py     (if LLM involved)
+
+REUSE (import, don't duplicate):
+  ✓ Configuration/config.py        → settings
+  ✓ Configuration/firebaseClient   → auth, verifyToken
+  ✓ Configuration/firestoreClient  → getDb / db
+  ✓ Configuration/geminiClient     → extractFromImage / extractFromHtml
+  ✓ Utils/responseHelper           → errorResponse, successResponse
+  ✓ Utils/jsonExtractor            → extractJson
+  ✓ Utils/htmlCleaner              → cleanHtml
+  ✓ Utils/uploadConstants          → ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE
+  ✓ Models/commonModels            → Readings, CurrentBillDetails
+
+
+═══════════════════════════════════════════════════════════════
+FILE NAMING CONVENTION
+═══════════════════════════════════════════════════════════════
+
+  Files:      camelCase      (billDataController.py)
+  Functions:  camelCase      (validateBillMonth)
+  Variables:  camelCase      (billMonthStr)
+  Classes:    PascalCase     (BillData, Readings)
+  Constants:  UPPER_SNAKE    (ALLOWED_IMAGE_TYPES)
+
+
+═══════════════════════════════════════════════════════════════
+RESPONSE SHAPE (EVERY ENDPOINT)
+═══════════════════════════════════════════════════════════════
+
+Success:
+  {
+    "success": true,
+    "message": "...",
+    "data": { ... },
+    ...extra
+  }
+
+Error:
+  {
+    "success": false,
+    "message": "...",
+    ...extra (e.g., "errors": [...])
+  }
+
+
+═══════════════════════════════════════════════════════════════
+STATUS CODE CONVENTIONS USED
+═══════════════════════════════════════════════════════════════
+
+  200 / 201  → Success
+  400        → Bad request (empty file, malformed input)
+  401        → Unauthorized (missing/invalid token)
+  409        → Conflict (duplicate record)
+  413        → Payload too large
+  415        → Unsupported media type
+  422        → Unprocessable entity (validation failed)
+  500        → Internal server error
+  502        → Bad gateway (upstream service failed)

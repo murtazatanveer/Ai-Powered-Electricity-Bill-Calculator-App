@@ -65,10 +65,10 @@ async def handleBillData(
         if not billData.get("success"):
             return JSONResponse(status_code=422, content=billData)
 
-        # 6) Bill month validation
-        ok, err = validateBillMonth(billData)
-        if not ok:
-            return errorResponse(422, err)
+        # # 6) Bill month validation
+        # ok, err = validateBillMonth(billData)
+        # if not ok:
+        #     return errorResponse(422, err)
 
         # 7) Status / phase / consumption validation
         ok, err = validateStatusRules(billData, status, meterPhase)
