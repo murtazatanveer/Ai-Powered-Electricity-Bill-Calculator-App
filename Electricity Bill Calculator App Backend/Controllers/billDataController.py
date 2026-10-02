@@ -91,8 +91,10 @@ async def handleBillData(
             unitsPresentReading=billData.get("unitsPresentReading"),
             readingDate=billData.get("readingDate"),
             billingHistory=previousReadings,
+            monthlyRunningUnits=billData.get("unitsPresentReading")
         )
 
+        
         saved, err = await saveBillData(uid, userBillData)
         if not saved:
             return errorResponse(409, err)

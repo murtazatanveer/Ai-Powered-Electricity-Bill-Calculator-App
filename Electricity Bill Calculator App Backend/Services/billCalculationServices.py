@@ -1,14 +1,3 @@
-# Services/billCalculationServices.py
-"""
-Bill calculation service.
-
-Contains:
-    - Tariff slab lookup
-    - Slab-wise energy cost (Lifeline / Protected / Not Protected)
-    - Fixed-charge selection
-    - Full bill assembly with all 8 components
-    - Firestore tariff fetch + persistence
-"""
 
 from datetime import datetime, timezone
 
@@ -50,9 +39,9 @@ def _getCharges(slabs: list[dict], slabType: str) -> tuple[float, float]:
     )
 
 
-# ═════════════════════════════════════════════════════════════
+
 # SECTION 2 — Slab-wise energy cost calculation
-# ═════════════════════════════════════════════════════════════
+
 def calculateLifelineCost(units: int, slabs: list[dict]) -> tuple[float, list[dict]]:
     """Lifeline: single-tier — all units at one rate."""
     slabType = "upto50" if units <= 50 else "above50"
@@ -165,9 +154,9 @@ def calculateSlabWiseCost(
     return 0.0, []
 
 
-# ═════════════════════════════════════════════════════════════
+
 # SECTION 3 — Fixed charges selection
-# ═════════════════════════════════════════════════════════════
+
 def getFixedCharges(units: int, status: str, tariffData: dict) -> float:
     """Pick fixedCharges from the slab that matches the user's final bracket."""
     if status == "Lifeline":
@@ -203,9 +192,8 @@ def getFixedCharges(units: int, status: str, tariffData: dict) -> float:
     return 0.0
 
 
-# ═════════════════════════════════════════════════════════════
 # SECTION 4 — Individual bill component calculators
-# ═════════════════════════════════════════════════════════════
+
 def _electricityDuty(costOfElectricity: float, fpa: float, qta: float) -> float:
     return round((costOfElectricity + fpa + qta) * ELECTRICITY_DUTY_RATE, 2)
 
@@ -241,9 +229,8 @@ def _gst(
     return round(base * GST_RATE, 2)
 
 
-# ═════════════════════════════════════════════════════════════
 # SECTION 5 — Full bill assembly
-# ═════════════════════════════════════════════════════════════
+
 def calculateBill(
     units: int,
     status: str,
@@ -251,16 +238,7 @@ def calculateBill(
     fpaRate: float,
     qtaRate: float,
 ) -> dict:
-    """
-    Compute the full bill per category rules.
-
-    Returns:
-        {
-            "totalBill": ...,
-            "slabWiseEnergyCost": [ ... ],
-            "billBreakDown": { ... }
-        }
-    """
+    
     # 1) Cost of electricity (slab-wise)
     costOfElectricity, slabWiseBreakdown = calculateSlabWiseCost(
         units, status, tariffData
@@ -331,17 +309,9 @@ def calculateBill(
     }
 
 
-# ═════════════════════════════════════════════════════════════
 # SECTION 6 — Status transition (Rules 1 & 2)
-# ═════════════════════════════════════════════════════════════
 def decideNewStatus(currentStatus: str, consumedUnits: float) -> str | None:
-    """
-    Returns the new status if a change is needed, otherwise None.
-
-    Rules:
-    1. consumedUnits > 200 and status in (Protected, Lifeline) → Not Protected
-    2. consumedUnits > 100 and status == Lifeline              → Protected
-    """
+    
     if consumedUnits > PROTECTED_THRESHOLD and currentStatus in ("Protected", "Lifeline"):
         return "Not Protected"
 
@@ -351,43 +321,34 @@ def decideNewStatus(currentStatus: str, consumedUnits: float) -> str | None:
     return None
 
 
-# ═════════════════════════════════════════════════════════════
 # SECTION 7 — Firestore access
-# ═════════════════════════════════════════════════════════════
+
 async def getBillData(uid: str) -> dict | None:
-    """Fetch the BillData document for a user. Returns None if missing."""
     return await getDoc("BillData", uid)
 
 
 async def updateBillStatus(uid: str, newStatus: str) -> None:
-    """Update the status field on the BillData document."""
     await updateDoc("BillData", uid, {"status": newStatus})
 
 
 async def getTariffRates() -> dict | None:
-    """Fetch the current TariffRates document. Returns None if missing."""
     return await getDoc("TariffRates", settings.tariff_data_document_id)
 
 
-# ═════════════════════════════════════════════════════════════
 # SECTION 8 — Firestore writes for bill calculation
-# ═════════════════════════════════════════════════════════════
+
+async def updateMonthlyRunningUnits(uid: str, newReading: int) -> None:
+    
+    await updateDoc("BillData", uid, {"monthlyRunningUnits": newReading})
+
+
 async def updateUnitsPresentReading(uid: str, newReading: int) -> None:
-    """Update the unitsPresentReading field on the BillData document."""
+   
     await updateDoc("BillData", uid, {"unitsPresentReading": newReading})
 
 
 async def saveBillBreakdown(uid: str, billResult: dict) -> str:
-    """
-    Save the bill breakdown to the Readings collection with an
-    auto-generated document ID.
-
-    Adds:
-        - uid       : user's Firebase UID
-        - createdAt : current UTC timestamp
-
-    Returns the newly created document ID.
-    """
+ 
     doc = {
         "uid": uid,
         "createdAt": datetime.now(timezone.utc),

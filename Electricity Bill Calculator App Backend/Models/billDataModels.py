@@ -38,19 +38,7 @@ class BillData(BaseModel):
         List[Readings], Field(..., description="Consumer Billing History")
     ]
 
-
-class CurrentBillDetails(BaseModel):
-    month: str
-    units: int
-    bill: int
+    monthlyRunningUnits: Annotated[int, Field(..., gt=0,description="Latest running reading within current cycle")]
 
 
-class GeminiBillResponse(BaseModel):
-    
-    success: bool
-    message: str
-    consumerName: str | None = None
-    currentBillDetails: CurrentBillDetails | None = None
-    readingDate: int | None = None
-    unitsPresentReading: int | None = None
-    previousReadings: List[Readings] = Field(default_factory=list)
+
