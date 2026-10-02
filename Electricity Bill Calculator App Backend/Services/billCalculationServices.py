@@ -1,4 +1,4 @@
-
+from datetime import date
 from datetime import datetime, timezone
 
 from Configuration.config import settings
@@ -15,6 +15,9 @@ ELECTRICITY_DUTY_RATE = 0.015   # 1.5%
 FC_SURCHARGE_PER_UNIT = 0.43
 TV_FEE = 35.0
 GST_RATE = 0.18                 # 18%
+
+REVERT_LOOKBACK_MONTHS = 5     # previous 5 stored months (+ current = 6 total)
+REVERT_THRESHOLD = 200
 
 
 # ═════════════════════════════════════════════════════════════
@@ -355,3 +358,51 @@ async def saveBillBreakdown(uid: str, billResult: dict) -> str:
         **billResult,
     }
     return await addDoc("Readings", doc)
+
+# Section 9
+
+def hasReadingDatePassed(readingDate: int, today: date | None = None) -> bool:
+    
+    today = today or date.today()
+
+    try:
+        readingDateObj = date(today.year, today.month, readingDate)
+    except ValueError:
+        # Invalid day for this month (e.g., 31 in a 30-day month)
+        return False
+
+    return today >= readingDateObj
+
+
+def shouldRevertToProtected(
+    currentStatus: str,
+    consumedUnits: int,
+    billingHistory: list[dict],
+) -> bool:
+    
+    if currentStatus != "Not Protected":
+        return False
+
+    if len(billingHistory) < REVERT_LOOKBACK_MONTHS:
+        return False
+
+    last6 = [consumedUnits] + [
+        r.get("units", float("inf"))
+        for r in billingHistory[:REVERT_LOOKBACK_MONTHS]
+    ]
+
+    return all(u <= REVERT_THRESHOLD for u in last6)
+
+
+async def prependBillingHistory(uid: str, entry: dict) -> None:
+   
+    billData = await getDoc("BillData", uid)
+    existing = (billData or {}).get("billingHistory", [])
+    newHistory = [entry] + existing
+    await updateDoc("BillData", uid, {"billingHistory": newHistory})
+
+async def resetCycle(uid: str, newReading: int) -> None:
+    await updateDoc("BillData", uid, {
+        "unitsPresentReading": newReading,
+        "monthlyRunningUnits": newReading,
+    })

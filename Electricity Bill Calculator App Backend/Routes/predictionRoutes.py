@@ -13,7 +13,7 @@ from Controllers.predictionController import (
 router = APIRouter(prefix="/ml-model",tags=["ML Model Prediction"])
 
 
-@router.post("/")
+@router.post("")
 async def predictBill(
     modelInput: ModelInput,
     decoded: dict = Depends(verifyToken),
