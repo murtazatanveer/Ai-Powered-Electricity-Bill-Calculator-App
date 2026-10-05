@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from Configuration.config import settings
 from Utils.firestoreHelpers import addDoc, getDoc, updateDoc
+from Configuration.firestore_client import get_db
 
 
 # ─────────────────────────────────────────────────────────────
@@ -406,3 +407,44 @@ async def resetCycle(uid: str, newReading: int) -> None:
         "unitsPresentReading": newReading,
         "monthlyRunningUnits": newReading,
     })
+
+    # Services/billCalculationServices.py (append)
+
+async def getReadingsByUid(uid: str) -> list[dict]:
+    """
+    Fetch all Readings documents for a user, sorted newest → oldest.
+    Returns only the fields needed by the client.
+    """
+    db = get_db()
+    query = (
+        db.collection("Readings")
+        .where("uid", "==", uid)
+        .order_by("createdAt", direction="DESCENDING")
+    )
+    results = []
+    async for doc in query.stream():
+        d = doc.to_dict()
+        createdAt = d.get("createdAt")
+
+        results.append({
+            "docId": doc.id,                                     # ← doc ID instead of uid
+            "createdAt": createdAt.isoformat() if createdAt else None,
+            "consumedUnits": d.get("consumedUnits"),
+            "status": d.get("status"),
+            "totalBill": d.get("totalBill"),
+        })
+    return results
+
+# Services/billCalculationServices.py (append)
+
+async def getReadingById(docId: str) -> dict | None:
+    """Fetch a single Reading document by ID. Returns None if missing."""
+    doc = await getDoc("Readings", docId)
+    if doc is None:
+        return None
+
+    createdAt = doc.get("createdAt")
+    if createdAt:
+        doc["createdAt"] = createdAt.isoformat()
+
+    return doc

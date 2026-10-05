@@ -4,13 +4,13 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from Dependencies.verifyAuthToken import verifyToken
-from Controllers.billDataController import handleBillData
+from Controllers.billDataController import handleBillData,handleGetBillData
 
 
-router = APIRouter(tags=["Bill Data"])
+router = APIRouter(prefix="/bill-data",tags=["Bill Data"])
 
 
-@router.post("/bill-data")
+@router.post("")
 async def setBillData(
     disco: Annotated[
         Literal[
@@ -38,3 +38,8 @@ async def setBillData(
         meterPhase=meterPhase,
         decoded=decoded,
     )
+
+
+@router.get("/get-bill-data")
+async def getBillDataRoute(decoded: dict = Depends(verifyToken)):
+    return await handleGetBillData(decoded)

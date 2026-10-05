@@ -1,0 +1,45 @@
+import { useEffect, useRef } from "react";
+import { View, StyleSheet, Animated } from "react-native";
+import { COLORS, BORDER_RADIUS } from "../../Theme/colors";
+
+const SkeletonBlock = ({
+  width = "100%",
+  height = 16,
+  borderRadius = BORDER_RADIUS.sm,
+  style,
+}) => {
+  const opacity = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.5,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={[styles.base, { width, height, borderRadius, opacity }, style]}
+    />
+  );
+};
+
+const styles = StyleSheet.create({
+  base: {
+    backgroundColor: COLORS.skeleton,
+  },
+});
+
+export default SkeletonBlock;

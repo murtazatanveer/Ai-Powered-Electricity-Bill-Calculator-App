@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from Configuration.gemini_client import extract_from_image
 from Models.billDataModels import BillData
 from Prompts.billExtractionPrompt import BILL_EXTRACTION_PROMPT
-from Services.billDataServices import saveBillData , validateBillMonth , validateStatusRules
+from Services.billDataServices import saveBillData , validateBillMonth , validateStatusRules  , getBillData
 from Utils.extractJson import extractJSON
 from Utils.responseHelper import errorResponse, successResponse
 
@@ -37,8 +37,8 @@ async def handleBillData(
         if billImage.content_type not in ALLOWED_IMAGE_TYPES:
             return errorResponse(
                 415,
-                f"Unsupported file type: {billImage.content_type}. "
-                f"Allowed formats: PNG, JPEG, JPG, WEBP, HEIC, HEIF.",
+                f"Unsupported file type is {billImage.content_type}. "
+                f"Allowed formats are PNG, JPEG, JPG, WEBP, HEIC, HEIF.",
             )
 
         # 2) Read image bytes
@@ -120,3 +120,23 @@ async def handleBillData(
 
     except Exception as e:
         return errorResponse(500, f"Internal server error: {str(e)}")
+    
+    
+
+# Controllers/billDataController.py (append)
+
+async def handleGetBillData(decoded: dict) -> JSONResponse:
+    try: 
+        uid = decoded["uid"]
+
+        billData = await getBillData(uid)
+        if billData is None:
+            return errorResponse(404, "Bill Data does not exist")
+
+        return successResponse(
+        200,
+        "Bill Data fetched successfully",
+        data=billData,
+        )
+    except Exception as e:
+        return errorResponse(500,f"Internal server error: {str(e)}")

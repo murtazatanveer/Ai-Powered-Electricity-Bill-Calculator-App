@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Any
 
 from Models.billDataModels import BillData
-from Utils.firestoreHelpers import docExists, setDoc
+from Utils.firestoreHelpers import docExists, setDoc , getDoc
 
 
 # ─────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ def validateStatusRules(
         if meterPhase != "Single Phase":
             return False, (
                 "Lifeline consumers must have a Single Phase meter. "
-                f"Provided: {meterPhase}."
+                f"Provided meter phase is {meterPhase}."
             )
 
         units12 = _firstNUnits(previousReadings, 12)
@@ -101,9 +101,9 @@ def validateStatusRules(
             monthNames = [r.get("month") for r in previousReadings[:12]]
             bad = ", ".join(f"{monthNames[i]} = {u} units" for i, u in offenders)
             return False, (
-                "Lifeline validation failed: monthly consumption "
+                "Lifeline validation failed, monthly consumption units"
                 f"must be ≤ 100 units for the last 12 months. "
-                f"Violations: {bad}."
+                f"The following violations were found: {bad}."
             )
 
     elif status == "Protected":
@@ -119,9 +119,9 @@ def validateStatusRules(
             monthNames = [r.get("month") for r in previousReadings[:6]]
             bad = ", ".join(f"{monthNames[i]} = {u} units" for i, u in offenders)
             return False, (
-                "Protected validation failed: monthly consumption "
+                "Protected validation failed, monthly consumption units"
                 f"must be ≤ 200 units for the last 6 months. "
-                f"Violations: {bad}."
+                f"The following violations were found: {bad}."
             )
 
     elif status == "Not Protected":
@@ -135,7 +135,7 @@ def validateStatusRules(
         hasHighMonth = any(u > 200 for u in units6)
         if not hasHighMonth:
             return False, (
-                "Not Protected validation failed: no month in the last 6 "
+                "Not Protected validation failed, no month in the last 6 "
                 "shows consumption above 200 units. This usage pattern "
                 "suggests the bill should be Protected, not Unprotected."
             )
@@ -153,14 +153,14 @@ def validateStatusRules(
 # Firestore persistence
 # ─────────────────────────────────────────────────────────────
 async def saveBillData(uid: str, userBillData: BillData) -> tuple[bool, str]:
-    """
-    Save bill data to Firestore under BillData/{uid}.
-    Returns (saved, errorMessage).
-    - If a document already exists → (False, "Bill Data Already Exists").
-    - On success → (True, "").
-    """
+   
     if await docExists("BillData", uid):
         return False, "Bill Data Already Exists"
 
     await setDoc("BillData", uid, userBillData.model_dump())
     return True, ""
+
+
+async def getBillData(uid: str) -> dict | None:
+    """Fetch the BillData document for a user. Returns None if missing."""
+    return await getDoc("BillData", uid)

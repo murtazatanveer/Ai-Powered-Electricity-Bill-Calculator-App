@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from Configuration.config import settings
 from Configuration.firestore_client import get_db, close_db
@@ -61,6 +62,16 @@ app = FastAPI(
     title="Electricity Bill Calculator API",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+
+# ── CORS ──
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # tighten this in production
+    allow_credentials=False,       # must be False when using "*"
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
