@@ -12,7 +12,11 @@ import { auth } from "./FirebaseConfig";
 
 /**
  * Create a new account and set the displayName.
- * Returns { success, user, token, error }.
+ * Returns { success, user, error }.
+ *
+ * A verification email is dispatched automatically (non-blocking).
+ * The caller does not need to pass or store the ID token — apiClient
+ * fetches a fresh token from Firebase on every request.
  */
 export const signUpWithEmail = async (email, password, fullName) => {
   try {
@@ -22,31 +26,26 @@ export const signUpWithEmail = async (email, password, fullName) => {
       password,
     );
 
-    // Attach the display name so Firebase Console shows the user's name
     if (fullName) {
       await updateProfile(credential.user, { displayName: fullName.trim() });
     }
 
-    // Fire-and-forget email verification (optional, doesn't block signup)
+    // Fire-and-forget — signup succeeds even if verification email fails
     try {
       await sendEmailVerification(credential.user);
-    } catch (verifyErr) {
-      // Non-fatal — the account is created
-      console.warn("[auth] verification email failed:", verifyErr?.message);
+    } catch {
+      // Non-fatal — the account is already created
     }
 
-    // Get fresh ID token to log
-    const token = await credential.user.getIdToken();
-
-    return { success: true, user: credential.user, token, error: null };
+    return { success: true, user: credential.user, error: null };
   } catch (error) {
-    return { success: false, user: null, token: null, error };
+    return { success: false, user: null, error };
   }
 };
 
 /**
  * Sign in an existing user.
- * Returns { success, user, token, error }.
+ * Returns { success, user, error }.
  */
 export const signInWithEmail = async (email, password) => {
   try {
@@ -55,10 +54,9 @@ export const signInWithEmail = async (email, password) => {
       email.trim(),
       password,
     );
-    const token = await credential.user.getIdToken();
-    return { success: true, user: credential.user, token, error: null };
+    return { success: true, user: credential.user, error: null };
   } catch (error) {
-    return { success: false, user: null, token: null, error };
+    return { success: false, user: null, error };
   }
 };
 
@@ -77,6 +75,7 @@ export const sendResetEmail = async (email) => {
 
 /**
  * Sign the current user out.
+ * Returns { success, error }.
  */
 export const signOutUser = async () => {
   try {

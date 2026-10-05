@@ -2,7 +2,7 @@ from datetime import date
 from datetime import datetime, timezone
 
 from Configuration.config import settings
-from Utils.firestoreHelpers import addDoc, getDoc, updateDoc
+from Utils.firestoreHelpers import addDoc, getDoc, updateDoc,deleteDoc
 from Configuration.firestore_client import get_db
 
 
@@ -448,3 +448,64 @@ async def getReadingById(docId: str) -> dict | None:
         doc["createdAt"] = createdAt.isoformat()
 
     return doc
+
+# Services/billCalculationServices.py (updated)
+
+async def deleteReading(docId: str, uid: str) -> tuple[bool, str]:
+   
+    try:
+        # 1) Verify ownership + existence
+        existing = await getDoc("Readings", docId)
+        if existing is None or existing.get("uid") != uid:
+            return False, "Reading not found"
+
+        # 2) Delete the reading
+        await deleteDoc("Readings", docId)
+
+        # 3) Recalculate monthlyRunningUnits
+        await _recalculateMonthlyRunningUnits(uid)
+
+        return True, ""
+
+    except Exception:
+        return False, "Failed to delete reading"
+
+
+async def _recalculateMonthlyRunningUnits(uid: str) -> None:
+    """
+    Recompute monthlyRunningUnits from the latest remaining Reading,
+    or reset to unitsPresentReading if no readings remain.
+    """
+    db = get_db()
+
+    # Fetch the latest remaining reading for this user
+    query = (
+        db.collection("Readings")
+        .where("uid", "==", uid)
+        .order_by("createdAt", direction="DESCENDING")
+        .limit(1)
+    )
+
+    latestUnits = None
+    async for doc in query.stream():
+        d = doc.to_dict()
+        consumed = d.get("consumedUnits")
+        if isinstance(consumed, (int, float)):
+            latestUnits = consumed
+        break
+
+    # Read the cycle baseline
+    billData = await getDoc("BillData", uid)
+    if billData is None:
+        return
+
+    unitsPresentReading = billData.get("unitsPresentReading", 0)
+
+    if latestUnits is None:
+        # No readings left → reset to baseline
+        newRunning = unitsPresentReading
+    else:
+        # Latest remaining reading's absolute value
+        newRunning = unitsPresentReading + latestUnits
+
+    await updateDoc("BillData", uid, {"monthlyRunningUnits": newRunning})

@@ -1,5 +1,6 @@
 # Routes/billCalculationRoutes.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,Path
+from typing import Annotated
 
 from Dependencies.verifyAuthToken import verifyToken
 from Models.billcalculationModels import BillCalculation
@@ -7,7 +8,8 @@ from Controllers.billCalculationController import (
     handleCalculateBill,
     handleGetReadingById,
     handleGetReadings,
-    handleGetTariffRates
+    handleGetTariffRates,
+    handleDeleteReading
 )
 
 
@@ -33,8 +35,15 @@ async def getTariffRatesRoute(decoded: dict = Depends(verifyToken)):
 
 @router.get("/{docId}")
 async def getReadingByIdRoute(
-    docId: str,
+    docId: Annotated[str,Path(...,description="Enter Firestore Doc Id")],
     decoded: dict = Depends(verifyToken),
 ):
     return await handleGetReadingById(docId, decoded)
+
+@router.delete("/{docId}")
+async def deleteReadingRoute(
+    docId: Annotated[str,Path(...,description="Enter Firestore Doc Id")],
+    decoded: dict = Depends(verifyToken),
+):
+    return await handleDeleteReading(docId, decoded)
 

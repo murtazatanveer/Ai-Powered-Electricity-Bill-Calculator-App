@@ -5,7 +5,7 @@ export const apiEndPoint = "http://127.0.0.1:8000";
 export const API_ENDPOINTS = {
   USER: {
     ADD_CREDENTIALS: "/user/add-credentials",
-    // add more as backend grows
+    CHECK_EMAIL: (email) => `/user/${encodeURIComponent(email)}`,
   },
   BILL: {
     BILL_DATA: "/bill-data",
@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   READINGS: {
     GET_ALL: "/bill-calculation/get-readings",
     GET_BY_ID: (docId) => `/bill-calculation/${docId}`,
+    DELETE: (docId) => `/bill-calculation/${docId}`,
   },
   TARIFF: {
     GET_RATES: "/bill-calculation/get-tariffrates",

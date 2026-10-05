@@ -28,8 +28,35 @@ import QuickStatGrid from "./Components/QuickStatGrid";
 import UnitsBarChart from "./Components/UnitsBarChart";
 
 import { formatCurrency } from "../ReadingsScreen/Utils/formatMonthYear";
+import useCountUp from "../Common/Hooks/useCountUp";
 import apiClient from "../Config/apiClient";
 import { API_ENDPOINTS } from "../Config/ApiEndpoint";
+
+// ============================================================
+// Bill badge sub-component
+// Lives in its own component so `useCountUp` can be called
+// unconditionally (React hooks rules), and so the animation
+// restarts whenever the selected month's bill changes.
+// ============================================================
+const BillBadge = ({ entry }) => {
+  const animatedBill = useCountUp(entry.bill, 2400);
+
+  return (
+    <View style={styles.billBadge}>
+      <View style={styles.billBadgeLeft}>
+        <View style={styles.billBadgeIcon}>
+          <Ionicons name="receipt-outline" size={16} color={COLORS.primary} />
+        </View>
+        <View>
+          <Text style={styles.billBadgeMonth}>{entry.month}</Text>
+          <Text style={styles.billBadgeLabel}>Electricity Bill</Text>
+        </View>
+      </View>
+
+      <Text style={styles.billBadgeValue}>{formatCurrency(animatedBill)}</Text>
+    </View>
+  );
+};
 
 const DashboardScreen = ({ navigation, route, openDrawer }) => {
   // ---------- Data source ----------
@@ -95,7 +122,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
   const actionsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Only animate when we have data to show
     if (!hasRenderableData) return;
 
     Animated.sequence([
@@ -156,8 +182,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
     setIsLoading(true);
     setLoadError("");
 
-    // Trigger the effect by resetting state; the effect will fetch again.
-    // Using a small tick to guarantee a state change even if values are equal.
     setTimeout(async () => {
       try {
         const result = await apiClient.get(API_ENDPOINTS.BILL.GET_BILL_DATA);
@@ -282,29 +306,8 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
               </View>
             </View>
 
-            {selectedEntry ? (
-              <View style={styles.billBadge}>
-                <View style={styles.billBadgeLeft}>
-                  <View style={styles.billBadgeIcon}>
-                    <Ionicons
-                      name="receipt-outline"
-                      size={16}
-                      color={COLORS.primary}
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.billBadgeMonth}>
-                      {selectedEntry.month}
-                    </Text>
-                    <Text style={styles.billBadgeLabel}>Electricity Bill</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.billBadgeValue}>
-                  {formatCurrency(selectedEntry.bill)}
-                </Text>
-              </View>
-            ) : null}
+            {/* Bill badge — animated count-up, restarts on month change */}
+            {selectedEntry ? <BillBadge entry={selectedEntry} /> : null}
 
             <UnitsBarChart
               data={billingHistory}
@@ -420,6 +423,7 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.primary,
     letterSpacing: -0.5,
+    fontVariant: ["tabular-nums"],
   },
 
   // ---------- Empty ----------

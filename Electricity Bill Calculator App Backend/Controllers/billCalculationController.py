@@ -16,7 +16,8 @@ from Services.billCalculationServices import (
     saveBillBreakdown,
     shouldRevertToProtected,
     getReadingsByUid,
-    getReadingById
+    getReadingById,
+    deleteReading
 )
 
 from Utils.responseHelper import errorResponse, successResponse
@@ -45,10 +46,10 @@ async def handleCalculateBill(bill: BillCalculation, decoded: dict) -> JSONRespo
         monthlyRunningUnits = billData.get("monthlyRunningUnits")
 
         # 3a) Sanity check — reading can't decrease within the cycle
-        if monthlyRunningUnits is not None and bill.units < monthlyRunningUnits:
+        if monthlyRunningUnits is not None and bill.units <= monthlyRunningUnits:
             return errorResponse(
                 422,
-                f"New reading {bill.units} cannot be less than "
+                f"New reading {bill.units} cannot be less than or equal to"
                 f"previous monthly reading {monthlyRunningUnits}.",
             )
 
@@ -283,6 +284,26 @@ async def handleGetTariffRates() -> JSONResponse:
             200,
             "Tariff rates fetched successfully",
             data=tariffData,
+        )
+    except Exception as e:
+        return errorResponse(500, f"Internal server error: {str(e)}")
+    
+
+# Controllers/billCalculationController.py (append)
+
+async def handleDeleteReading(docId: str, decoded: dict) -> JSONResponse:
+    try:
+        uid = decoded["uid"]
+
+        deleted, err = await deleteReading(docId, uid)
+        if not deleted:
+            status = 404 if err == "Reading not found" else 500
+            return errorResponse(status, err)
+
+        return successResponse(
+            200,
+            "Reading deleted successfully",
+            data={"docId": docId},
         )
     except Exception as e:
         return errorResponse(500, f"Internal server error: {str(e)}")

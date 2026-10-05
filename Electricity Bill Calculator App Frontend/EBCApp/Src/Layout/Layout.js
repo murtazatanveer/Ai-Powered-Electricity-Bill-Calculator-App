@@ -15,6 +15,7 @@ import ReadingsScreen from "../ReadingsScreen/ReadingsScreen";
 import DashboardScreen from "../DashboardScreen/DashboardScreen";
 import TariffRatesScreen from "../TariffRatesScreen/TariffRatesScreen";
 import SingleReadingScreen from "../SingleReadingScreen/SingleReadingScreen";
+import BillCalculationScreen from "../BillCalculationScreen/BillCalculationScreen";
 
 import ScreenShell from "./Components/ScreenShell";
 import SplashSkeleton from "../Common/Components/SplashSkeleton";
@@ -97,6 +98,10 @@ export default function Layout() {
       <Stack.Screen
         name="SingleReadingScreen"
         component={SingleReadingScreen}
+      />
+      <Stack.Screen
+        name="BillCalculationScreen"
+        component={BillCalculationScreen}
       />
     </Stack.Navigator>
   );

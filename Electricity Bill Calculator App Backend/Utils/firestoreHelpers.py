@@ -36,3 +36,8 @@ async def addDoc(collection: str, data: dict) -> str:
     db = get_db()
     _, docRef = await db.collection(collection).add(data)
     return docRef.id
+
+async def deleteDoc(collection: str, docId: str) -> None:
+    """Delete a Firestore document."""
+    db = get_db()
+    await db.collection(collection).document(docId).delete()

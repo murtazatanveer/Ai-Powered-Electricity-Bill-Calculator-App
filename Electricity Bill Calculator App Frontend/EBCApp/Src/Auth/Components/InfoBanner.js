@@ -37,6 +37,13 @@ const InfoBanner = ({ type, message, onHide, autoDismissMs = 3000 }) => {
   const isError = type === "error";
   const accentColor = isError ? COLORS.error : COLORS.success;
 
+  // Defensive: banner only renders strings. If a caller ever passes an
+  // object/array, fall back to a generic message instead of crashing.
+  const safeMessage =
+    typeof message === "string" && message.trim()
+      ? message
+      : "Something went wrong.";
+
   return (
     <Animated.View
       style={[
@@ -50,7 +57,9 @@ const InfoBanner = ({ type, message, onHide, autoDismissMs = 3000 }) => {
         size={18}
         color={accentColor}
       />
-      <Text style={[styles.bannerText, { color: accentColor }]}>{message}</Text>
+      <Text style={[styles.bannerText, { color: accentColor }]}>
+        {safeMessage}
+      </Text>
     </Animated.View>
   );
 };

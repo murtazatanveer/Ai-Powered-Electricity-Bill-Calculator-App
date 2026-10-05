@@ -11,22 +11,25 @@ const ScreenShell = ({ ScreenComponent, route, navigation }) => {
   const openDrawer = () => setDrawerOpen(true);
   const closeDrawer = () => setDrawerOpen(false);
 
-  // Logout — self-contained
+  // Logout — clears the Firebase session and navigates to Login.
+  // The try/catch guarantees navigation even if signOut fails.
   const handleLogout = async () => {
-    await signOutUser();
+    try {
+      await signOutUser();
+    } catch {
+      // Non-fatal — we still transition to Login
+    }
     navigation?.replace("LoginScreen");
   };
 
   return (
     <View style={styles.container}>
-      {/* Screen renders its own header with a hamburger that calls openDrawer */}
       <ScreenComponent
         navigation={navigation}
         route={route}
         openDrawer={openDrawer}
       />
 
-      {/* Drawer overlays everything */}
       <CustomDrawer
         isOpen={drawerOpen}
         onClose={closeDrawer}

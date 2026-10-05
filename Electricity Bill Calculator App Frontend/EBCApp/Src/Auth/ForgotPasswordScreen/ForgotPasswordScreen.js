@@ -24,13 +24,12 @@ import FormInput from "../Components/FormInput";
 import InfoBanner from "../Components/InfoBanner";
 import PrimaryButton from "../../Common/Components/PrimaryButton";
 import ScreenBackground from "../../Common/Components/ScreenBackground";
-import HeaderWithBack from "../..//Common/Components/HeaderWithBack";
+import HeaderWithBack from "../../Common/Components/HeaderWithBack";
 
 import { sendResetEmail } from "../../Config/authService";
-import {
-  getFriendlyFirebaseError,
-  getFirebaseErrorField,
-} from "../../Config/FirebaseConfig";
+import { getFriendlyFirebaseError } from "../../Config/firebaseErrors";
+import apiClient from "../../Config/apiClient";
+import { API_ENDPOINTS } from "../../Config/ApiEndpoint";
 
 const ForgotPasswordScreen = ({ navigation }) => {
   // ---------- Form state ----------
@@ -87,6 +86,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   // ---------- Submit ----------
   const handleSendReset = async () => {
+    // 1) Local format validation
     const localError = validateEmail(email);
     if (localError) {
       setEmailError(localError);
@@ -99,25 +99,70 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setBanner({ type: null, message: "" });
 
     try {
-      const result = await sendResetEmail(email);
+      // 2) Public backend check — does this email exist?
+      const check = await apiClient.get(
+        API_ENDPOINTS.USER.CHECK_EMAIL(email.trim()),
+      );
 
-      if (!result.success) {
-        const friendly = getFriendlyFirebaseError(result.error);
-        const field = getFirebaseErrorField(result.error);
-
-        if (field === "email") setEmailError(friendly);
-        setBanner({ type: "error", message: friendly });
+      // Network / server error
+      if (check.status === 0) {
+        setIsLoading(false);
+        setBanner({
+          type: "error",
+          message:
+            check.message ||
+            "Network error. Please check your internet connection.",
+        });
         return;
       }
 
-      console.log("=== Password Reset Email Sent ===");
-      console.log("To:", email.trim());
-      console.log("=================================");
+      if (check.status === 500) {
+        setIsLoading(false);
+        setBanner({
+          type: "error",
+          message: "Something went wrong on our end. Please try again.",
+        });
+        return;
+      }
 
+      // 404 → no account
+      if (check.status === 404) {
+        setIsLoading(false);
+        setEmailError("No account found with this email");
+        setBanner({
+          type: "error",
+          message: "No account found with this email. Please sign up first.",
+        });
+        return;
+      }
+
+      // Any other non-200
+      if (!check.success || check.status !== 200) {
+        setIsLoading(false);
+        setBanner({
+          type: "error",
+          message: check.message || "Could not verify your email.",
+        });
+        return;
+      }
+
+      // 3) Email exists — send the reset link via Firebase
+      const result = await sendResetEmail(email);
+
+      if (!result.success) {
+        setIsLoading(false);
+        setBanner({
+          type: "error",
+          message: getFriendlyFirebaseError(result.error),
+        });
+        return;
+      }
+
+      // 4) Success
       setBanner({
         type: "success",
         message:
-          "Reset link sent! Check your inbox and follow the link to set a new password.",
+          "Reset link sent! Check your inbox and follow the link within 1 hour.",
       });
       setIsSent(true);
 
@@ -274,8 +319,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                         color={COLORS.textLight}
                       />
                       <Text style={styles.noteText}>
-                        Didn't get the email? Check your Inbox, or try again in
-                        a minute. The link expires in 1 hour.
+                        Didn't get the email? Check your spam folder, or try
+                        again in a minute. The reset link expires in 1 hour.
                       </Text>
                     </View>
                   </View>
@@ -303,8 +348,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     We've sent a password reset link to{" "}
                     <Text style={styles.successEmail}>{email.trim()}</Text>.
                     {"\n\n"}
-                    Follow the link to set a new password. If you don't see the
-                    email, check your spam folder.
+                    Follow the link and change your password. Link is valid for
+                    1 hour. Check you gmail inbox
                   </Text>
 
                   <PrimaryButton

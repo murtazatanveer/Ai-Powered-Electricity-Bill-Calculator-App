@@ -21,12 +21,39 @@ const parseResponse = async (response) => {
   return body;
 };
 
+// FastAPI returns `detail` as either a string (HTTPException) or an array
+// of validation-error objects (Pydantic 422). Normalize both to a string.
+const extractErrorMessage = (parsed, status) => {
+  if (!parsed || typeof parsed !== "object") {
+    return `Request failed with status ${status}`;
+  }
+
+  if (typeof parsed.detail === "string" && parsed.detail.trim()) {
+    return parsed.detail;
+  }
+
+  if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+    const first = parsed.detail[0];
+    if (first && typeof first === "object" && typeof first.msg === "string") {
+      const field =
+        Array.isArray(first.loc) && first.loc.length > 0
+          ? first.loc[first.loc.length - 1]
+          : null;
+      return field ? `${field}: ${first.msg}` : first.msg;
+    }
+    return "Invalid request data.";
+  }
+
+  if (typeof parsed.message === "string" && parsed.message.trim()) {
+    return parsed.message;
+  }
+
+  return `Request failed with status ${status}`;
+};
+
 const normalizeResponse = (response, parsed) => {
   if (!response.ok) {
-    const message =
-      (parsed && typeof parsed === "object" && parsed.detail) ||
-      (parsed && typeof parsed === "object" && parsed.message) ||
-      `Request failed with status ${response.status}`;
+    const message = extractErrorMessage(parsed, response.status);
 
     return {
       success: false,
@@ -49,9 +76,7 @@ const normalizeResponse = (response, parsed) => {
   };
 };
 
-// ---------- Firebase fresh-token helper ----------
-// Firebase caches the token internally, so the common case returns instantly.
-// It only hits the network when the token is close to expiry.
+// ---------- Fresh token helper ----------
 const getFreshToken = async () => {
   try {
     const user = auth?.currentUser;
@@ -102,8 +127,8 @@ const requestForm = async (method, path, formData, extraHeaders = {}) => {
   const url = buildUrl(path);
   const token = await getFreshToken();
 
-  // ⚠️ Do NOT set Content-Type for FormData — the browser/RN sets it
-  //    automatically with the correct multipart boundary.
+  // Do NOT set Content-Type for FormData — the browser/RN sets it
+  // automatically with the correct multipart boundary.
   const headers = { ...extraHeaders };
   if (token) headers.authToken = `Bearer_${token}`;
 

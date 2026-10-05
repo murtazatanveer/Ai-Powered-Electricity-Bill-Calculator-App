@@ -8,6 +8,7 @@ import {
   SHADOWS,
 } from "../../Theme/colors";
 import { formatCurrency } from "../../ReadingsScreen/Utils/formatMonthYear";
+import useCountUp from "../../Common/Hooks/useCountUp";
 
 const getStatusMeta = (status) => {
   if (status === "Protected")
@@ -39,6 +40,8 @@ const MetaTag = ({ icon, text }) => (
 const BillResultCard = ({ bill }) => {
   const meta = getStatusMeta(bill.status);
 
+  const animatedTotal = useCountUp(bill.totalBill, 2400);
+
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -56,7 +59,8 @@ const BillResultCard = ({ bill }) => {
         </View>
       </View>
 
-      <Text style={styles.total}>{formatCurrency(bill.totalBill)}</Text>
+      {/* Animated total */}
+      <Text style={styles.total}>{formatCurrency(animatedTotal)}</Text>
 
       <View style={styles.metaRow}>
         <MetaTag
@@ -65,7 +69,7 @@ const BillResultCard = ({ bill }) => {
         />
         <MetaTag
           icon="calendar-outline"
-          text={new Date(bill.createdAt).toLocaleDateString()}
+          text={new Date(bill.createdAt || Date.now()).toLocaleDateString()}
         />
       </View>
     </View>
@@ -120,6 +124,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginVertical: SPACING.sm,
     letterSpacing: -1,
+    // Prevent layout shift while the number ticks up — reserve height
+    minHeight: 48,
+    fontVariant: ["tabular-nums"],
   },
   metaRow: {
     flexDirection: "row",

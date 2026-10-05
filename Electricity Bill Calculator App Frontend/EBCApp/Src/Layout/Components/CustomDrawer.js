@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.weights.bold,
   },
 
-  // ---------- Footer / logout (RED) ----------
+  // ---------- Footer / logout ----------
   footer: {
     marginTop: "auto",
     padding: SPACING.md,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: "#c0554eff", // ← softer, deeper red
+    backgroundColor: "#C0554E",
     ...SHADOWS.medium,
   },
   logoutIconWrap: {

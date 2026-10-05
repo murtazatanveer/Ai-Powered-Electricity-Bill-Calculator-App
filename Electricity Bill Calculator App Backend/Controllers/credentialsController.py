@@ -1,8 +1,11 @@
 # Controllers/credentialsController.py
 from fastapi.responses import JSONResponse
+from fastapi import Path
+from pydantic import EmailStr
+from typing import Annotated
 
 from Models.credentialsModels import Credentials
-from Services.userServices import userExists, createUser
+from Services.userServices import userExists, createUser,emailExists
 from Utils.responseHelper import errorResponse, successResponse
 
 
@@ -33,5 +36,17 @@ async def handleSetCredentials(credentials: Credentials, decoded: dict) -> JSONR
     except Exception as e:
         return errorResponse(500, f"Internal server error: {str(e)}")
     
+
+async def handleEmailExists(email: Annotated[EmailStr,Path(...,description="Enter your email")] ) -> JSONResponse:
+    try:
+        exists = await emailExists(email)
+
+        if exists:
+            return successResponse(200, "Email exists")
+
+        return errorResponse(404, "Email does not exist")
+
+    except Exception as e:
+        return errorResponse(500, f"Internal server error: {str(e)}")
     
     

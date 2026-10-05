@@ -1,6 +1,7 @@
 # Services/userServices.py
 from Utils.firestoreHelpers import docExists, setDoc
-
+from Configuration.firebase_client import get_firebase_app
+from firebase_admin import auth
 
 async def userExists(uid: str) -> bool:
     """Check if a user document already exists."""
@@ -19,3 +20,18 @@ async def createUser(uid: str, email: str | None, fullName: str) -> str:
     })
 
     return f"Users/{uid}"
+
+
+
+
+async def emailExists(email: str) -> bool:
+    
+    get_firebase_app()   # ensure initialized (idempotent)
+    try:
+        auth.get_user_by_email(email)
+        return True
+    except auth.UserNotFoundError:
+        return False
+    except Exception:
+        # Unexpected Firebase error → treat as not found
+        return False

@@ -23,10 +23,10 @@ import InfoBanner from "../Auth/Components/InfoBanner";
 import PrimaryButton from "../Common/Components/PrimaryButton";
 import ScreenBackground from "../Common/Components/ScreenBackground";
 import BottomSheetModal from "../Common/Components/BottomSheetModal";
+import ConfirmDialog from "../Common/Components/ConfirmDialog";
 import FilterButton from "./Components/FilterButton";
 import EmptyState from "../Common/Components/EmptyState";
 import ScreenHeader from "../Common/Components/ScreenHeader";
-import StatCard from "./Components/StatCard";
 import ReadingsSkeleton from "./Components/ReadingsSkeleton";
 
 import ReadingCard from "./Components/ReadingCard";
@@ -36,27 +36,19 @@ import {
   MONTH_OPTIONS,
   YEARS,
   STATUS_OPTIONS,
+  formatReadingDate,
+  formatCurrency,
 } from "./Utils/formatMonthYear";
+import useCountUp from "../Common/Hooks/useCountUp";
 
 import apiClient from "../Config/apiClient";
 import { API_ENDPOINTS } from "../Config/ApiEndpoint";
-
-// ============================================================
-// MOCK METER — replace with data from backend in future
-// ============================================================
-const MOCK_METER = {
-  currentMonthUnits: 770,
-  meterUnits: 12450,
-  daysLeftInMonth: 12,
-};
 
 const ReadingsScreen = ({ navigation, openDrawer }) => {
   // ---------- Data ----------
   const [readings, setReadings] = useState([]);
   const [isLoadingReadings, setIsLoadingReadings] = useState(true);
   const [loadError, setLoadError] = useState("");
-
-  const [meter] = useState(MOCK_METER);
 
   // ---------- Filter state ----------
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -70,10 +62,14 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
 
   const [banner, setBanner] = useState({ type: null, message: "" });
 
+  // ---------- Delete confirmation ----------
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // ---------- Entry animations ----------
   const headerTranslateY = useRef(new Animated.Value(-30)).current;
   const headerOpacity = useRef(new Animated.Value(0)).current;
-  const statsOpacity = useRef(new Animated.Value(0)).current;
+  const badgeOpacity = useRef(new Animated.Value(0)).current;
   const listOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -90,7 +86,7 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
           useNativeDriver: true,
         }),
       ]),
-      Animated.timing(statsOpacity, {
+      Animated.timing(badgeOpacity, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
@@ -101,7 +97,7 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [headerTranslateY, headerOpacity, statsOpacity, listOpacity]);
+  }, [headerTranslateY, headerOpacity, badgeOpacity, listOpacity]);
 
   // ---------- Fetch readings on mount ----------
   useEffect(() => {
@@ -121,7 +117,6 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
         } else if (result.success && !result.data) {
           setReadings([]);
         } else {
-          // Backend error (401, 500, network, etc.)
           setLoadError(
             result.message || "Could not load your readings. Please try again.",
           );
@@ -210,6 +205,16 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
     [visibleReadings],
   );
 
+  // ---------- This-month units (from the newest section) ----------
+  const thisMonthUnits = useMemo(() => {
+    const latest = sections[0]?.data ?? [];
+    if (latest.length === 0) return 0;
+    return Math.max(...latest.map((r) => r.consumedUnits ?? 0), 0);
+  }, [sections]);
+
+  // Animated count for the badge
+  const animatedThisMonthUnits = useCountUp(thisMonthUnits, 2400);
+
   const handleReadingPress = (reading) => {
     navigation?.navigate("SingleReadingScreen", {
       readingDocId: reading.docId,
@@ -218,6 +223,56 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
 
   const handleAddReading = () => {
     navigation?.navigate("BillCalculationScreen");
+  };
+
+  // ---------- Delete flow ----------
+  const handleDeletePress = (reading) => {
+    setPendingDelete(reading);
+  };
+
+  const handleCancelDelete = () => {
+    if (isDeleting) return;
+    setPendingDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete?.docId) return;
+
+    setIsDeleting(true);
+
+    try {
+      const result = await apiClient.delete(
+        API_ENDPOINTS.READINGS.DELETE(pendingDelete.docId),
+      );
+
+      if (!result.success) {
+        setBanner({
+          type: "error",
+          message: result.message || "Could not delete the reading.",
+        });
+        setIsDeleting(false);
+        setPendingDelete(null);
+        return;
+      }
+
+      setReadings((prev) =>
+        prev.filter((r) => r.docId !== pendingDelete.docId),
+      );
+
+      setBanner({
+        type: "success",
+        message: "Reading deleted successfully.",
+      });
+      setPendingDelete(null);
+    } catch {
+      setBanner({
+        type: "error",
+        message: "Could not delete the reading. Please try again.",
+      });
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // ---------- Loading state — skeleton ----------
@@ -257,29 +312,29 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
           />
         </Animated.View>
 
-        {/* ---------- Stats row ---------- */}
-        <Animated.View style={[styles.statsRow, { opacity: statsOpacity }]}>
-          <StatCard
-            icon="calendar-outline"
-            value={meter.daysLeftInMonth}
-            unit="days"
-            label="Left this month"
-            accent={COLORS.warning}
-          />
-          <StatCard
-            icon="speedometer-outline"
-            value={meter.currentMonthUnits}
-            unit="kWh"
-            label="This month"
-            accent={COLORS.primary}
-          />
-          <StatCard
-            icon="flash-outline"
-            value={meter.meterUnits}
-            unit="kWh"
-            label="Meter units"
-            accent={COLORS.info}
-          />
+        {/* ---------- This month units badge ---------- */}
+        <Animated.View style={[styles.badgeWrap, { opacity: badgeOpacity }]}>
+          <View style={styles.monthBadge}>
+            <View style={styles.monthBadgeIcon}>
+              <Ionicons
+                name="speedometer-outline"
+                size={20}
+                color={COLORS.white}
+              />
+            </View>
+
+            <View style={styles.monthBadgeText}>
+              <Text style={styles.monthBadgeLabel}>This month</Text>
+              <Text style={styles.monthBadgeHint}>Units consumed</Text>
+            </View>
+
+            <View style={styles.monthBadgeValueWrap}>
+              <Text style={styles.monthBadgeValue}>
+                {animatedThisMonthUnits}
+              </Text>
+              <Text style={styles.monthBadgeUnit}>kWh</Text>
+            </View>
+          </View>
         </Animated.View>
 
         {/* ---------- Filter row ---------- */}
@@ -300,7 +355,7 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
           ) : null}
         </View>
 
-        {/* ---------- Banner (filter feedback + load error) ---------- */}
+        {/* ---------- Banner ---------- */}
         <View style={styles.bannerWrap}>
           <InfoBanner
             type={loadError && readings.length === 0 ? "error" : banner?.type}
@@ -314,7 +369,7 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
           />
         </View>
 
-        {/* ---------- Readings list — grouped by month ---------- */}
+        {/* ---------- Readings list ---------- */}
         <Animated.View style={{ flex: 1, opacity: listOpacity }}>
           {sections.length === 0 ? (
             <EmptyState
@@ -341,9 +396,10 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
                   <View style={styles.sectionBody}>
                     {section.data.map((reading, index) => (
                       <ReadingCard
-                        key={`${reading.createdAt}-${index}`}
+                        key={reading.docId || `${reading.createdAt}-${index}`}
                         reading={reading}
                         onPress={handleReadingPress}
+                        onDelete={handleDeletePress}
                         isLast={index === section.data.length - 1}
                       />
                     ))}
@@ -354,6 +410,57 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
           )}
         </Animated.View>
       </View>
+
+      {/* ---------- Delete confirmation dialog ---------- */}
+      <ConfirmDialog
+        visible={!!pendingDelete}
+        title="Delete this reading?"
+        message="This action cannot be undone."
+        icon="trash"
+        iconColor={COLORS.error}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmColor={COLORS.error}
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      >
+        {pendingDelete ? (
+          <View style={styles.deleteDetails}>
+            <View style={styles.deleteDetailRow}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+              <Text style={styles.deleteDetailLabel}>Date</Text>
+              <Text style={styles.deleteDetailValue}>
+                {formatReadingDate(pendingDelete.createdAt)}
+              </Text>
+            </View>
+
+            <View style={styles.deleteDetailRow}>
+              <Ionicons name="flash-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.deleteDetailLabel}>Units</Text>
+              <Text style={styles.deleteDetailValue}>
+                {pendingDelete.consumedUnits} kWh
+              </Text>
+            </View>
+
+            <View style={styles.deleteDetailRow}>
+              <Ionicons
+                name="receipt-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+              <Text style={styles.deleteDetailLabel}>Bill</Text>
+              <Text style={styles.deleteDetailValue}>
+                {formatCurrency(pendingDelete.totalBill)}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      </ConfirmDialog>
 
       {/* ---------- Filter sheet ---------- */}
       <BottomSheetModal
@@ -467,11 +574,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingTop: SPACING.xl,
   },
-  statsRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
+
+  // ---------- This month badge ----------
+  badgeWrap: {
     marginBottom: SPACING.md,
   },
+  monthBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.primary,
+    ...SHADOWS.medium,
+  },
+  monthBadgeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monthBadgeText: {
+    flex: 1,
+  },
+  monthBadgeLabel: {
+    fontSize: TYPOGRAPHY.sizes.md,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.white,
+    letterSpacing: -0.2,
+  },
+  monthBadgeHint: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.white,
+    opacity: 0.85,
+    marginTop: 2,
+  },
+  monthBadgeValueWrap: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  monthBadgeValue: {
+    fontSize: 32,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.white,
+    letterSpacing: -0.5,
+    fontVariant: ["tabular-nums"],
+  },
+  monthBadgeUnit: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.white,
+    opacity: 0.85,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+  },
+
+  // ---------- Filter row ----------
   filterRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -512,6 +674,33 @@ const styles = StyleSheet.create({
   sectionBody: {
     gap: SPACING.xs,
     marginTop: SPACING.xs,
+  },
+
+  // ---------- Delete dialog details ----------
+  deleteDetails: {
+    backgroundColor: COLORS.primaryFade,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.xs,
+  },
+  deleteDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  deleteDetailLabel: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  deleteDetailValue: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textPrimary,
+    fontWeight: TYPOGRAPHY.weights.bold,
   },
 
   // Sheet

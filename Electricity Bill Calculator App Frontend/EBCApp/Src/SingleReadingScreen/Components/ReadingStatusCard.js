@@ -12,6 +12,7 @@ import {
   formatReadingDate,
 } from "../../ReadingsScreen/Utils/formatMonthYear";
 import { getStatusUpdatedMeta } from "../Utils/formatStatusUpdated";
+import useCountUp from "../../Common/Hooks/useCountUp";
 
 const getStatusMeta = (status) => {
   if (status === "Protected")
@@ -36,6 +37,9 @@ const ReadingStatusCard = ({ reading }) => {
   const updatedValueColor =
     reading.statusUpdated === true ? COLORS.white : "rgba(255, 255, 255, 0.7)";
 
+  // Animated counter — 0 → reading.totalBill over 2400ms
+  const animatedTotal = useCountUp(reading.totalBill, 2400);
+
   return (
     <View style={styles.card}>
       {/* Top row: label + status pill */}
@@ -54,8 +58,8 @@ const ReadingStatusCard = ({ reading }) => {
         </View>
       </View>
 
-      {/* Total */}
-      <Text style={styles.total}>{formatCurrency(reading.totalBill)}</Text>
+      {/* Animated total */}
+      <Text style={styles.total}>{formatCurrency(animatedTotal)}</Text>
 
       {/* Meta tags */}
       <View style={styles.metaRow}>
@@ -113,6 +117,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BORDER_RADIUS.circle,
     borderWidth: 1.5,
+    ...SHADOWS.small,
   },
   statusDot: {
     width: 6,
@@ -131,6 +136,8 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginVertical: SPACING.sm,
     letterSpacing: -1,
+    minHeight: 48,
+    fontVariant: ["tabular-nums"],
   },
   metaRow: {
     flexDirection: "row",
@@ -159,8 +166,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     marginVertical: SPACING.md,
   },
-
-  // ---------- statusUpdated row ----------
   updatedRow: {
     flexDirection: "row",
     alignItems: "center",
