@@ -59,6 +59,11 @@ const SingleReadingScreen = ({ navigation, route }) => {
 
         if (!isMounted) return;
 
+        // ---- Auth errors during logout are expected — ignore silently ----
+        if (result.status === 401 || result.status === 422) {
+          return;
+        }
+
         if (result.success && result.status === 200 && result.data) {
           setReading(result.data);
         } else {

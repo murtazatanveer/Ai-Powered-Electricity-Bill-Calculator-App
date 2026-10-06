@@ -34,9 +34,6 @@ import { API_ENDPOINTS } from "../Config/ApiEndpoint";
 
 // ============================================================
 // Bill badge sub-component
-// Lives in its own component so `useCountUp` can be called
-// unconditionally (React hooks rules), and so the animation
-// restarts whenever the selected month's bill changes.
 // ============================================================
 const BillBadge = ({ entry }) => {
   const animatedBill = useCountUp(entry.bill, 2400);
@@ -83,6 +80,11 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
         const result = await apiClient.get(API_ENDPOINTS.BILL.GET_BILL_DATA);
 
         if (!isMounted) return;
+
+        // ---- Auth errors during logout are expected — ignore silently ----
+        if (result.status === 401 || result.status === 422) {
+          return;
+        }
 
         if (result.success && result.status === 200 && result.data) {
           setBillData(result.data);
@@ -174,7 +176,7 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
   };
 
   const handlePrediction = () => {
-    navigation?.navigate("PredictionScreen");
+    navigation?.navigate("SmartRecommendationScreen");
   };
 
   const handleRetry = () => {
@@ -185,6 +187,13 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
     setTimeout(async () => {
       try {
         const result = await apiClient.get(API_ENDPOINTS.BILL.GET_BILL_DATA);
+
+        // ---- Auth errors — ignore silently ----
+        if (result.status === 401 || result.status === 422) {
+          setIsLoading(false);
+          return;
+        }
+
         if (result.success && result.status === 200 && result.data) {
           setBillData(result.data);
         } else {
@@ -203,12 +212,9 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
 
   // ============================================================
   // RENDER PRIORITY
-  //   1. No bill data + still loading  → DashboardSkeleton
-  //   2. No bill data + done loading   → EmptyState with Retry
-  //   3. Has bill data                 → Full dashboard
   // ============================================================
 
-  // ---------- 1. Skeleton while data is missing ----------
+  // ---------- 1. Skeleton ----------
   if (!hasRenderableData && isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -270,7 +276,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ---------- Header ---------- */}
         <Animated.View style={{ opacity: headerOpacity }}>
           <ScreenHeader
             title="Dashboard"
@@ -279,7 +284,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
           />
         </Animated.View>
 
-        {/* ---------- Consumer Info ---------- */}
         <Animated.View
           style={{
             opacity: infoOpacity,
@@ -289,12 +293,10 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
           <ConsumerInfoCard data={billData} />
         </Animated.View>
 
-        {/* ---------- Quick Stats ---------- */}
         <Animated.View style={{ opacity: statsOpacity }}>
           <QuickStatGrid data={billData} />
         </Animated.View>
 
-        {/* ---------- Billing History Chart ---------- */}
         <Animated.View style={{ opacity: chartOpacity }}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -306,7 +308,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
               </View>
             </View>
 
-            {/* Bill badge — animated count-up, restarts on month change */}
             {selectedEntry ? <BillBadge entry={selectedEntry} /> : null}
 
             <UnitsBarChart
@@ -317,7 +318,6 @@ const DashboardScreen = ({ navigation, route, openDrawer }) => {
           </View>
         </Animated.View>
 
-        {/* ---------- Action Buttons ---------- */}
         <Animated.View
           style={[styles.actionsWrap, { opacity: actionsOpacity }]}
         >

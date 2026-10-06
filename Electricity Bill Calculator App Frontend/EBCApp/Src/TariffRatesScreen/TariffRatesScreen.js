@@ -46,13 +46,13 @@ const TariffRatesScreen = ({ navigation, openDrawer }) => {
 
         if (!isMounted) return;
 
+        // ---- Auth errors during logout are expected — ignore silently ----
+        if (result.status === 401 || result.status === 422) {
+          return;
+        }
+
         if (result.success && result.status === 200 && result.data) {
-          // Response shape: { success, message, data: { success, message, lifeline, protected, unprotected } }
-          // `result.data` is already unwrapped by apiClient.
-          // That inner object also has a `success` wrapper — use it directly.
           setTariff(result.data);
-          console.log(result.data);
-          console.log("----", result);
         } else {
           setLoadError(
             result.message || "Could not load tariff rates. Please try again.",

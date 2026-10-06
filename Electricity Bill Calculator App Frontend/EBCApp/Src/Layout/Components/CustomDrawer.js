@@ -25,6 +25,11 @@ const NAV_ITEMS = [
   { name: "DashboardScreen", label: "Dashboard", icon: "grid-outline" },
   { name: "ReadingsScreen", label: "Readings", icon: "document-text-outline" },
   {
+    name: "SmartRecommendationScreen",
+    label: "Recommendations",
+    icon: "bulb-outline",
+  },
+  {
     name: "TariffRatesScreen",
     label: "Tariff Rates",
     icon: "pricetags-outline",
@@ -96,9 +101,9 @@ const CustomDrawer = ({
 
   if (!isOpen) return null;
 
-  const displayName = user?.displayName || "Guest";
+  // ---------- Display values from Firebase user ----------
   const displayEmail = user?.email || "Not signed in";
-  const initial = displayName.trim().charAt(0).toUpperCase() || "G";
+  const initial = (user?.email?.trim().charAt(0) || "G").toUpperCase();
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -121,9 +126,6 @@ const CustomDrawer = ({
           </View>
           <View style={styles.profileText}>
             <Text style={styles.profileName} numberOfLines={1}>
-              {displayName}
-            </Text>
-            <Text style={styles.profileEmail} numberOfLines={1}>
               {displayEmail}
             </Text>
           </View>
@@ -238,16 +240,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   profileName: {
-    fontSize: TYPOGRAPHY.sizes.md,
+    fontSize: TYPOGRAPHY.sizes.sm,
     fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.white,
-    letterSpacing: -0.2,
-  },
-  profileEmail: {
-    fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.white,
-    opacity: 0.85,
-    marginTop: 2,
+    letterSpacing: -0.1,
   },
 
   // ---------- Nav ----------

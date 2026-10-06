@@ -20,4 +20,7 @@ export const API_ENDPOINTS = {
   TARIFF: {
     GET_RATES: "/bill-calculation/get-tariffrates",
   },
+  RECOMMENDATION: {
+    GET: "/smart-recommendation",
+  },
 };

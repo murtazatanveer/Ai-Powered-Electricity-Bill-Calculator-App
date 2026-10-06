@@ -10,29 +10,34 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from "../../Theme/colors";
 import BottomSheetModal from "../../Common/Components/BottomSheetModal";
 
+// value → exact string sent to the backend
+// label → what the user sees in the dropdown
 const DISCOS = [
-  "IESCO",
-  "LESCO",
-  "PESCO",
-  "GEPCO",
-  "FESCO",
-  "MEPCO",
-  "HESCO",
-  "SEPCO",
-  "QESCO",
-  "K-Electric",
-  "TESCO",
-  "HAZECO",
+  { value: "IESCO", label: "IESCO (Islamabad)" },
+  { value: "LESCO", label: "LESCO (Lahore)" },
+  { value: "PESCO", label: "PESCO (Peshawar)" },
+  { value: "GEPCO", label: "GEPCO (Gujranwala)" },
+  { value: "FESCO", label: "FESCO (Faisalabad)" },
+  { value: "MEPCO", label: "MEPCO (Multan)" },
+  { value: "HESCO", label: "HESCO (Hyderabad)" },
+  { value: "SEPCO", label: "SEPCO (Sukkur)" },
+  { value: "QESCO", label: "QESCO (Quetta)" },
+  { value: "K-Electric", label: "K-Electric (Karachi)" },
+  { value: "TESCO", label: "TESCO (Tribal Areas)" },
+  { value: "HAZECO", label: "HAZECO (Hazara)" },
 ];
 
 const DiscoSelector = ({ value, onChange, error }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSelect = (disco) => {
-    // Close modal first, then commit selection after animation
+  const handleSelect = (discoValue) => {
     setIsModalOpen(false);
-    setTimeout(() => onChange?.(disco), 50);
+    setTimeout(() => onChange?.(discoValue), 50);
   };
+
+  // Find the label to display for the currently-selected value
+  const selectedItem = DISCOS.find((d) => d.value === value);
+  const displayLabel = selectedItem ? selectedItem.label : null;
 
   return (
     <View style={styles.fieldGroup}>
@@ -52,7 +57,7 @@ const DiscoSelector = ({ value, onChange, error }) => {
           style={styles.triggerIcon}
         />
         <Text style={[styles.triggerText, !value && styles.placeholderText]}>
-          {value || "Select your DISCO"}
+          {displayLabel || "Select your DISCO"}
         </Text>
         <Ionicons name="chevron-down" size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
@@ -67,15 +72,15 @@ const DiscoSelector = ({ value, onChange, error }) => {
       >
         <FlatList
           data={DISCOS}
-          keyExtractor={(item) => item}
+          keyExtractor={(item) => item.value}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
-            const isSelected = value === item;
+            const isSelected = value === item.value;
             return (
               <TouchableOpacity
                 style={[styles.item, isSelected && styles.itemSelected]}
-                onPress={() => handleSelect(item)}
+                onPress={() => handleSelect(item.value)}
                 activeOpacity={0.7}
               >
                 <Text
@@ -84,7 +89,7 @@ const DiscoSelector = ({ value, onChange, error }) => {
                     isSelected && styles.itemTextSelected,
                   ]}
                 >
-                  {item}
+                  {item.label}
                 </Text>
                 {isSelected ? (
                   <Ionicons

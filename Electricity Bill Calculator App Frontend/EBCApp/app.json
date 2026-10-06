@@ -4,7 +4,7 @@
     "slug": "EBCApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Logo.png",
+    "icon": "./assets/splash-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -18,7 +18,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/Logo.png"
+      "favicon": "./assets/splash-icon.png"
     }
   }
 }

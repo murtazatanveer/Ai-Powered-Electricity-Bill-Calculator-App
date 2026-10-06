@@ -90,7 +90,6 @@ async def handlePredictBill(modelInput: ModelInput, decoded: dict) -> JSONRespon
             "Bill predicted successfully",
             data={
                 "predictionId": predictionId,
-                "predictedBillBDT": round(predictedBill, 2),
                 "bucketIndex": mapping["bucketIndex"],
                 "mappedUnits": mappedUnits,
                 "unitsPercentiles": mapping["unitsPercentiles"],

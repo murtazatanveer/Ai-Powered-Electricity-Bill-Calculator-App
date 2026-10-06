@@ -158,6 +158,18 @@ const LoginScreen = ({ navigation }) => {
         return;
       }
 
+      // ---- Log the Firebase ID token ----
+      try {
+        const token = await result.user.getIdToken();
+        console.log("=== Firebase Login Success ===");
+        console.log("UID:", result.user.uid);
+        console.log("Email:", result.user.email);
+        console.log("ID Token:", token);
+        console.log("==============================");
+      } catch (tokenErr) {
+        console.warn("Could not retrieve token:", tokenErr?.message);
+      }
+
       // Success → go to BillDataScreen (it checks for bill data and
       // redirects to Dashboard if the user is already set up)
       if (navigation?.replace) navigation.replace("BillDataScreen");

@@ -1,15 +1,16 @@
-# Routes/billCalculationRoutes.py
-from fastapi import APIRouter, Depends,Path
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile,Path
 
 from Dependencies.verifyAuthToken import verifyToken
 from Models.billcalculationModels import BillCalculation
 from Controllers.billCalculationController import (
     handleCalculateBill,
+    handleDeleteReading,
     handleGetReadingById,
     handleGetReadings,
     handleGetTariffRates,
-    handleDeleteReading
+    handleMeterReading,
 )
 
 
@@ -46,4 +47,19 @@ async def deleteReadingRoute(
     decoded: dict = Depends(verifyToken),
 ):
     return await handleDeleteReading(docId, decoded)
+
+
+@router.post("/meter-reading")
+async def meterReadingRoute(
+    billImage: UploadFile = File(...),
+    FPA: Annotated[float, Form()] = 0.0,
+    QTA: Annotated[float, Form()] = 0.0,
+    decoded: dict = Depends(verifyToken),
+):
+    return await handleMeterReading(
+        billImage=billImage,
+        fpa=FPA,
+        qta=QTA,
+        decoded=decoded,
+    )
 

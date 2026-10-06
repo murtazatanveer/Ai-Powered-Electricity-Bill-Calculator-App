@@ -19,6 +19,7 @@ import BillCalculationScreen from "../BillCalculationScreen/BillCalculationScree
 
 import ScreenShell from "./Components/ScreenShell";
 import SplashSkeleton from "../Common/Components/SplashSkeleton";
+import SmartRecommendationScreen from "../SmartRecommendationScreen/SmartRecommendationScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -92,6 +93,11 @@ export default function Layout() {
       <Stack.Screen
         name="TariffRatesScreen"
         component={withShell(TariffRatesScreen)}
+      />
+
+      <Stack.Screen
+        name="SmartRecommendationScreen"
+        component={withShell(SmartRecommendationScreen)}
       />
 
       {/* ---------- Detail screens (no shell) ---------- */}

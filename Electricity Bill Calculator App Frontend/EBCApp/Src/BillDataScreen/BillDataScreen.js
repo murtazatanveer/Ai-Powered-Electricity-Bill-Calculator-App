@@ -106,6 +106,13 @@ const BillDataScreen = ({ navigation }) => {
 
         if (!isMounted) return;
 
+        // ---- Auth errors during logout are expected — ignore silently ----
+        // If the user logged out while this request was in flight, the token
+        // is already cleared. Don't navigate, don't show anything.
+        if (result.status === 401 || result.status === 422) {
+          return;
+        }
+
         const hasBillData = result.success && result.status === 200;
 
         if (hasBillData) {

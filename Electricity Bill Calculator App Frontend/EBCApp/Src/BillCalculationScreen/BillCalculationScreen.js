@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { COLORS, SPACING, TYPOGRAPHY } from "../Theme/colors";
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from "../Theme/colors";
 
 import FormInput from "../Auth/Components/FormInput";
 import InfoBanner from "../Auth/Components/InfoBanner";
@@ -21,11 +21,13 @@ import ScreenBackground from "../Common/Components/ScreenBackground";
 import HeaderWithBack from "../Common/Components/HeaderWithBack";
 import SectionCard from "../Common/Components/SectionCard";
 import ErrorPopup from "../Common/Components/ErrorPopup";
+import InfoPopup from "../Common/Components/InfoPopup";
 
 import BillResultCard from "./Components/BillResultCard";
 import SlabBreakdownCard from "../Common/Components/SlabBreakdownCard";
 import BillBreakdownCard from "../Common/Components/BillBreakdownCard";
 
+import { describeStatusChange } from "./Utils/statusChange";
 import apiClient from "../Config/apiClient";
 import { API_ENDPOINTS } from "../Config/ApiEndpoint";
 
@@ -53,6 +55,27 @@ const BillCalculationScreen = ({ navigation }) => {
 
   const closeErrorPopup = () => {
     setErrorPopup({ visible: false, title: "", message: "" });
+  };
+
+  // ---------- Status change popup ----------
+  const [statusPopup, setStatusPopup] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    isDowngrade: false,
+    from: "",
+    to: "",
+  });
+
+  const closeStatusPopup = () => {
+    setStatusPopup({
+      visible: false,
+      title: "",
+      message: "",
+      isDowngrade: false,
+      from: "",
+      to: "",
+    });
   };
 
   // ---------- Entry animations ----------
@@ -185,6 +208,24 @@ const BillCalculationScreen = ({ navigation }) => {
 
       // ---------- Success → display bill on this screen ----------
       setBill(result.data);
+
+      // ---------- Status change popup ----------
+      const change = describeStatusChange(
+        result.data?.statusUpdated,
+        result.data?.previousStatus,
+        result.data?.status,
+      );
+
+      if (change.changed) {
+        setStatusPopup({
+          visible: true,
+          title: change.title,
+          message: change.message,
+          isDowngrade: change.isDowngrade,
+          from: result.data.previousStatus,
+          to: result.data.status,
+        });
+      }
     } catch {
       setIsLoading(false);
       showErrorPopup(
@@ -279,7 +320,7 @@ const BillCalculationScreen = ({ navigation }) => {
                 />
               </SectionCard>
 
-              {/* ---------- Bill Result — displayed below the form on success ---------- */}
+              {/* ---------- Bill Result ---------- */}
               {bill ? (
                 <>
                   <BillResultCard bill={bill} />
@@ -314,6 +355,44 @@ const BillCalculationScreen = ({ navigation }) => {
         message={errorPopup.message}
         onClose={closeErrorPopup}
       />
+
+      {/* ---------- Status change popup ---------- */}
+      <InfoPopup
+        visible={statusPopup.visible}
+        icon={statusPopup.isDowngrade ? "trending-up" : "trending-down"}
+        iconColor={statusPopup.isDowngrade ? COLORS.warning : COLORS.success}
+        title={statusPopup.title}
+        message={statusPopup.message}
+        buttonTitle="Got it"
+        onClose={closeStatusPopup}
+      >
+        {statusPopup.visible ? (
+          <View style={styles.statusChangePanel}>
+            <View style={styles.statusChangeRow}>
+              <Text style={styles.statusChangeLabel}>Previous</Text>
+              <Text style={styles.statusChangeValue}>{statusPopup.from}</Text>
+            </View>
+
+            <View style={styles.statusChangeDivider} />
+
+            <View style={styles.statusChangeRow}>
+              <Text style={styles.statusChangeLabel}>New status</Text>
+              <Text
+                style={[
+                  styles.statusChangeValue,
+                  {
+                    color: statusPopup.isDowngrade
+                      ? COLORS.warning
+                      : COLORS.success,
+                  },
+                ]}
+              >
+                {statusPopup.to}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      </InfoPopup>
     </SafeAreaView>
   );
 };
@@ -354,6 +433,39 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     letterSpacing: 0.3,
     textTransform: "uppercase",
+  },
+
+  // ---------- Status change panel ----------
+  statusChangePanel: {
+    backgroundColor: COLORS.primaryFade,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.xs,
+  },
+  statusChangeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 2,
+  },
+  statusChangeDivider: {
+    height: 1,
+    backgroundColor: COLORS.primaryLight,
+    opacity: 0.6,
+    marginVertical: 2,
+  },
+  statusChangeLabel: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  statusChangeValue: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.textPrimary,
+    fontWeight: TYPOGRAPHY.weights.bold,
   },
 });
 

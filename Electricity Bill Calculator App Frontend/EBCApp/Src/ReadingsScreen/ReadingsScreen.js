@@ -112,6 +112,11 @@ const ReadingsScreen = ({ navigation, openDrawer }) => {
 
         if (!isMounted) return;
 
+        // ---- Auth errors during logout are expected — ignore silently ----
+        if (result.status === 401 || result.status === 422) {
+          return;
+        }
+
         if (result.success && Array.isArray(result.data)) {
           setReadings(result.data);
         } else if (result.success && !result.data) {

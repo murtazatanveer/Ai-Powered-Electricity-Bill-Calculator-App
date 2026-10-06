@@ -2,8 +2,12 @@ from datetime import date
 from datetime import datetime, timezone
 
 from Configuration.config import settings
+from Configuration.gemini_client import extract_from_image
 from Utils.firestoreHelpers import addDoc, getDoc, updateDoc,deleteDoc
 from Configuration.firestore_client import get_db
+from Prompts.meterOCRPrompt import PROMPT as METER_READING_PROMPT
+
+from Utils.extractJson import extractJSON
 
 
 # ─────────────────────────────────────────────────────────────
@@ -452,7 +456,13 @@ async def getReadingById(docId: str) -> dict | None:
 # Services/billCalculationServices.py (updated)
 
 async def deleteReading(docId: str, uid: str) -> tuple[bool, str]:
-   
+    """
+    Delete a Reading document by ID (if owned by user) and roll back:
+      - monthlyRunningUnits to the latest remaining reading
+      - status to previousStatus if this reading changed it
+
+    Returns (deleted, errorMessage).
+    """
     try:
         # 1) Verify ownership + existence
         existing = await getDoc("Readings", docId)
@@ -462,8 +472,14 @@ async def deleteReading(docId: str, uid: str) -> tuple[bool, str]:
         # 2) Delete the reading
         await deleteDoc("Readings", docId)
 
-        # 3) Recalculate monthlyRunningUnits
+        # 3) Roll back monthlyRunningUnits
         await _recalculateMonthlyRunningUnits(uid)
+
+        # 4) Roll back status if this reading caused a change
+        if existing.get("statusUpdated") and existing.get("previousStatus"):
+            await updateDoc("BillData", uid, {
+                "status": existing["previousStatus"],
+            })
 
         return True, ""
 
@@ -509,3 +525,19 @@ async def _recalculateMonthlyRunningUnits(uid: str) -> None:
         newRunning = unitsPresentReading + latestUnits
 
     await updateDoc("BillData", uid, {"monthlyRunningUnits": newRunning})
+
+
+async def extractMeterReading(imageBytes: bytes, mimeType: str) -> dict:
+    """
+    Send the meter image to Gemini and extract the units.
+
+    Returns a dict with the parsed JSON from Gemini:
+        {"success": True, "message": "...", "units": <int>}
+    or  {"success": False, "message": "invalid meter image"}
+    """
+    rawRes = await extract_from_image(
+        image_bytes=imageBytes,
+        prompt=METER_READING_PROMPT,
+        mime_type=mimeType,
+    )
+    return extractJSON(rawRes)

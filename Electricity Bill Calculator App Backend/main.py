@@ -15,6 +15,7 @@ from Routes import billDataRoutes
 from Routes import credentialsRoutes
 from Routes import billCalculationRoutes
 from Routes import predictionRoutes
+from Routes import recommendationRoutes
 
 
 # Logging configuration (must be set before other imports run)
@@ -88,3 +89,4 @@ app.include_router(billDataRoutes.router)
 app.include_router(credentialsRoutes.router)
 app.include_router(billCalculationRoutes.router)
 app.include_router(predictionRoutes.router)
+app.include_router(recommendationRoutes.router)
